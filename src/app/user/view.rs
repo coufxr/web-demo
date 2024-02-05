@@ -26,7 +26,7 @@ pub async fn user_list(Extension(state): Extension<Arc<AppState>>) -> Json<Vec<U
                     data: user.gender.to_string(),
                 });
             }
-            return Json(result);
+            Json(result)
         }
         Err(_) => todo!(),
     }

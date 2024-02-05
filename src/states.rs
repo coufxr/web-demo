@@ -6,11 +6,6 @@ pub struct AppState {
     pub conn: DatabaseConnection,
 }
 
-// 创建数据库连接池
-// pub async fn init_db_connection(db_url: String) -> DatabaseConnection {
-//     Database::connect(db_url).await.unwrap()
-// }
-
 pub async fn init_db_connection(db_url: &str) -> DatabaseConnection {
     let mut opt = ConnectOptions::new(db_url.to_owned());
 
@@ -27,5 +22,5 @@ pub async fn init_db_connection(db_url: &str) -> DatabaseConnection {
 
     info!("数据库连接池初始化完成");
 
-    return db;
+    db
 }

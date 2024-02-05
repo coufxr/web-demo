@@ -1,9 +1,11 @@
-pub mod app;
+mod app;
+mod logger;
 mod middleware;
-pub mod routes;
-pub mod states;
+mod routes;
+mod states;
 
 use axum::{http::StatusCode, routing::get, Extension, Router};
+use std::str::FromStr;
 use std::{env, sync::Arc};
 use tower::ServiceBuilder;
 use tower_http::trace::{self, TraceLayer};
@@ -15,18 +17,15 @@ async fn main() {
     let host = env::var("HOST").expect("HOST is not set in .env file");
     let port = env::var("PORT").expect("PORT is not set in .env file");
     let server_url = format!("{host}:{port}");
+
+    let logger_level = env::var("logger_level").expect("logger_level is not set in .env file");
+
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set in .env file");
 
     let conn = states::init_db_connection(db_url.as_str()).await;
     let state = states::AppState { conn };
 
-    tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG) //只有Debug 模式下才能打印sea-orm的完整sql日志
-        .with_writer(std::io::stdout)
-        // .with_test_writer()
-        .with_target(false)
-        .compact()
-        .init();
+    logger::init_logger(Level::from_str(&logger_level).expect("Invalid log level"));
 
     async fn fallback() -> (StatusCode, &'static str) {
         (StatusCode::NOT_FOUND, "Not Found")

@@ -63,12 +63,35 @@ pub async fn user_list(
     }
 }
 
-pub async fn user_detail(Path(input): Path<UserInput>) -> JsonResponse<UserOutput> {
-    let data = UserOutput {
-        id: input.id,
-        name: format!("User {}", "hhhh"),
-        data: "data".to_string(),
-    };
+pub async fn user_detail(
+    Path(input): Path<UserInput>,
+    Extension(state): Extension<Arc<AppState>>,
+) -> JsonResponse<UserOutput> {
+    let qs = edu_account::Entity::find_by_id(input.id)
+        .one(&state.conn)
+        .await;
 
-    JsonResponse::success(data)
+    match qs {
+        Ok(acct) => {
+            let acct = acct.unwrap();
+            let data = UserOutput {
+                id: acct.id,
+                uid: acct.uid,
+                account_name: acct.account_name,
+                name: acct.name,
+                gender: acct.gender,
+                telephone: acct.telephone,
+                email: acct.email,
+                address: acct.address,
+                account_type: acct.account_type,
+                last_login_at: acct.last_login_at,
+                created_at: acct.created_at,
+            };
+            JsonResponse::success(data)
+        }
+        Err(err) => {
+            eprintln!("{err}");
+            todo!()
+        }
+    }
 }

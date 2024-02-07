@@ -1,4 +1,5 @@
 use sea_orm::prelude::DateTimeUtc;
+use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -9,13 +10,14 @@ pub struct UserListInput {
     pub page_size: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, FromQueryResult)]
 pub struct UserListOutput {
     pub id: i32,
-    pub uid: String,
     pub account_name: Option<String>,
+    pub account_type: i8,
     pub name: String,
     pub gender: i8,
+    pub telephone: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -23,7 +25,7 @@ pub struct UserInput {
     pub id: i32,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, FromQueryResult)]
 pub struct UserOutput {
     pub id: i32,
     pub uid: String,

@@ -25,7 +25,7 @@ pub struct UserInput {
     pub id: i32,
 }
 
-#[derive(Clone, Serialize, Deserialize, FromQueryResult)]
+#[derive(Default, Clone, Serialize, Deserialize, FromQueryResult)]
 pub struct UserOutput {
     pub id: i32,
     pub uid: String,

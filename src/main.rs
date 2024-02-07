@@ -1,15 +1,17 @@
-mod app;
-mod logger;
-pub mod response;
-mod routes;
-mod states;
-
-use axum::{http::StatusCode, routing::get, Extension, Router};
 use std::str::FromStr;
 use std::{env, sync::Arc};
+
+use axum::{http::StatusCode, routing::get, Extension, Router};
 use tower::ServiceBuilder;
 use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
+
+mod app;
+mod error;
+mod logger;
+mod response;
+mod routes;
+mod states;
 
 #[tokio::main]
 async fn main() {

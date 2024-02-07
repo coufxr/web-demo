@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use axum::extract::Query;
 use axum::{extract::Path, Extension};
 use sea_orm::{
     ColumnTrait, Condition, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
 };
 
+use crate::error::AppError;
 use crate::response::JsonResponse;
 use crate::states::AppState;
 
@@ -57,20 +59,17 @@ pub async fn user_list(
 pub async fn user_detail(
     Path(input): Path<UserInput>,
     Extension(state): Extension<Arc<AppState>>,
-) -> JsonResponse<UserOutput> {
+) -> Result<JsonResponse<UserOutput>, AppError> {
     let qs = edu_account::Entity::find_by_id(input.id)
         .into_model::<UserOutput>()
         .one(&state.conn)
-        .await;
+        .await
+        .map_err(AppError::from)?;
+    // .unwrap_or_default(); // 可直接使用model的默认值
 
-    match qs {
-        Ok(acct) => {
-            let acct = acct.unwrap();
-            JsonResponse::success(acct)
-        }
-        Err(err) => {
-            eprintln!("{err}");
-            todo!()
-        }
+    if qs.is_none() {
+        return Err(anyhow!("nill").into());
     }
+
+    Ok(JsonResponse::success(qs.unwrap()))
 }

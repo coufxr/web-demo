@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use axum::extract::Query;
 use axum::{extract::Path, Extension};
-use sea_orm::{ColumnTrait, Condition, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder};
+use sea_orm::{
+    ColumnTrait, Condition, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
+};
 
 use crate::response::JsonResponse;
 use crate::states::AppState;
@@ -16,14 +18,15 @@ pub async fn user_list(
     Extension(state): Extension<Arc<AppState>>,
 ) -> JsonResponse<Vec<UserListOutput>> {
     let qs = edu_account::Entity::find()
-        // .select_only() // 指定加载哪些字段  //暂时不可使用 原因未知
-        // .columns([
-        //     edu_account::Column::Id,
-        //     edu_account::Column::Uid,
-        //     edu_account::Column::AccountName,
-        //     edu_account::Column::Name,
-        //     edu_account::Column::Gender,
-        // ])
+        .select_only() // 指定加载哪些字段
+        .columns([
+            edu_account::Column::Id,
+            edu_account::Column::AccountName,
+            edu_account::Column::AccountType,
+            edu_account::Column::Name,
+            edu_account::Column::Gender,
+            edu_account::Column::Telephone,
+        ])
         .filter(
             // 实现 字段存在及查询. 不存在则跳过
             Condition::all()
@@ -36,26 +39,14 @@ pub async fn user_list(
                 ),
         )
         .order_by_desc(edu_account::Column::Id) //排序
+        .into_model::<UserListOutput>() //指定的字段需要在此处进行接收, 否则原本 model 会因为字段缺失而报错
         // .all(&state.conn) // 获取全部的数据
         .paginate(&state.conn, input.page_size.unwrap_or(10))
         .fetch_page(input.page.unwrap_or(1) - 1) //page 页数从 `0` 开始算起
         .await;
 
     match qs {
-        Ok(data) => {
-            // 将查询结果转换为Vec<User>
-            let mut result: Vec<UserListOutput> = Vec::new();
-            for user in data {
-                result.push(UserListOutput {
-                    id: user.id,
-                    uid: user.uid,
-                    account_name: user.account_name,
-                    name: user.name,
-                    gender: user.gender,
-                });
-            }
-            JsonResponse::success(result)
-        }
+        Ok(data) => JsonResponse::success(data),
         Err(err) => {
             eprintln!("{err}");
             todo!()
@@ -68,26 +59,14 @@ pub async fn user_detail(
     Extension(state): Extension<Arc<AppState>>,
 ) -> JsonResponse<UserOutput> {
     let qs = edu_account::Entity::find_by_id(input.id)
+        .into_model::<UserOutput>()
         .one(&state.conn)
         .await;
 
     match qs {
         Ok(acct) => {
             let acct = acct.unwrap();
-            let data = UserOutput {
-                id: acct.id,
-                uid: acct.uid,
-                account_name: acct.account_name,
-                name: acct.name,
-                gender: acct.gender,
-                telephone: acct.telephone,
-                email: acct.email,
-                address: acct.address,
-                account_type: acct.account_type,
-                last_login_at: acct.last_login_at,
-                created_at: acct.created_at,
-            };
-            JsonResponse::success(data)
+            JsonResponse::success(acct)
         }
         Err(err) => {
             eprintln!("{err}");

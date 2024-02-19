@@ -2,6 +2,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sea_orm::DbErr;
 use thiserror::Error;
+use tracing::error;
 
 use crate::response::{EmptyStruct, JsonResponse};
 
@@ -20,12 +21,13 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            AppError::DBError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "数据库错误".to_string()),
-            AppError::AxumError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "服务错误".to_string()),
+            AppError::DBError(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#?}")),
+            AppError::AxumError(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#?}")),
             AppError::Other(e) => (StatusCode::BAD_REQUEST, e),
             // ... 其他匹配
         };
         // 为什么需要在下方指定 <EmptyStruct> 明明结构体已经返回的是 EmptyStruct
+        error!("err info: {}", error_message);
         let res = JsonResponse::<EmptyStruct>::error(status.as_u16(), error_message);
         res.into_response()
     }

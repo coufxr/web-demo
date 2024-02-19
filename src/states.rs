@@ -3,7 +3,7 @@ use tracing::info;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub conn: DatabaseConnection,
+    pub db: DatabaseConnection,
 }
 
 pub async fn init_db_connection(db_url: &str) -> DatabaseConnection {

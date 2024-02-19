@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use axum::extract::Query;
 use axum::{extract::Path, Extension};
 use sea_orm::{
     ColumnTrait, Condition, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
 };
 
-use crate::error::AppError;
+use crate::error::{AppError, AppResult};
 use crate::response::JsonResponse;
 use crate::states::AppState;
 
@@ -18,8 +17,8 @@ use super::schemas::{UserInput, UserListInput, UserListOutput, UserOutput};
 pub async fn user_list(
     Query(input): Query<UserListInput>,
     Extension(state): Extension<Arc<AppState>>,
-) -> JsonResponse<Vec<UserListOutput>> {
-    let qs = edu_account::Entity::find()
+) -> AppResult<Vec<UserListOutput>> {
+    let data = edu_account::Entity::find()
         .select_only() // 指定加载哪些字段
         .columns([
             edu_account::Column::Id,
@@ -37,7 +36,7 @@ pub async fn user_list(
                 .add_option(
                     input
                         .telephone
-                        .map(|t| edu_account::Column::Gender.contains(t)),
+                        .map(|t| edu_account::Column::Telephone.contains(t)),
                 ),
         )
         .order_by_desc(edu_account::Column::Id) //排序
@@ -45,21 +44,16 @@ pub async fn user_list(
         // .all(&state.conn) // 获取全部的数据
         .paginate(&state.conn, input.page_size.unwrap_or(10))
         .fetch_page(input.page.unwrap_or(1) - 1) //page 页数从 `0` 开始算起
-        .await;
+        .await
+        .map_err(AppError::from)?;
 
-    match qs {
-        Ok(data) => JsonResponse::success(data),
-        Err(err) => {
-            eprintln!("{err}");
-            todo!()
-        }
-    }
+    Ok(JsonResponse::success(data))
 }
 
 pub async fn user_detail(
     Path(input): Path<UserInput>,
     Extension(state): Extension<Arc<AppState>>,
-) -> Result<JsonResponse<UserOutput>, AppError> {
+) -> AppResult<UserOutput> {
     let qs = edu_account::Entity::find_by_id(input.id)
         .into_model::<UserOutput>()
         .one(&state.conn)
@@ -68,7 +62,7 @@ pub async fn user_detail(
     // .unwrap_or_default(); // 可直接使用model的默认值
 
     if qs.is_none() {
-        return Err(anyhow!("nill").into());
+        return Err(AppError::Other("未找到对应数据".to_string()));
     }
 
     Ok(JsonResponse::success(qs.unwrap()))

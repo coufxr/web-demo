@@ -1,4 +1,5 @@
-use sea_orm::prelude::DateTimeUtc;
+use crate::tools::{format_date_time, format_option_date_time};
+use sea_orm::prelude::DateTimeLocal;
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 
@@ -36,6 +37,8 @@ pub struct UserOutput {
     pub email: Option<String>,
     pub address: Option<String>,
     pub account_type: i8,
-    pub last_login_at: Option<DateTimeUtc>,
-    pub created_at: DateTimeUtc,
+    #[serde(serialize_with = "format_option_date_time")]
+    pub last_login_at: Option<DateTimeLocal>,
+    #[serde(serialize_with = "format_date_time")]
+    pub created_at: DateTimeLocal,
 }

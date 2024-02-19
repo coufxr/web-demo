@@ -25,8 +25,8 @@ async fn main() {
 
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set in .env file");
 
-    let conn = states::init_db_connection(db_url.as_str()).await;
-    let state = states::AppState { conn };
+    let db = states::init_db_connection(db_url.as_str()).await;
+    let state = Arc::new(states::AppState { db });
 
     logger::init_logger(Level::from_str(&logger_level).expect("Invalid log level"));
 
@@ -45,7 +45,7 @@ async fn main() {
                         .make_span_with(trace::DefaultMakeSpan::new().level(Level::DEBUG))
                         .on_response(trace::DefaultOnResponse::new().level(Level::DEBUG)),
                 )
-                .layer(Extension(Arc::new(state))),
+                .layer(Extension(state)),
         );
 
     let listener = tokio::net::TcpListener::bind(server_url).await.unwrap();

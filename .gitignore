@@ -21,3 +21,4 @@ rust-project.json
 ### IDE File
 .vscode/
 .idea/
+.env

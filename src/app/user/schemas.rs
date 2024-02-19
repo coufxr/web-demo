@@ -14,10 +14,10 @@ pub struct UserListInput {
 #[derive(Clone, Serialize, Deserialize, FromQueryResult)]
 pub struct UserListOutput {
     pub id: i32,
-    pub account_name: Option<String>,
-    pub account_type: i8,
-    pub name: String,
-    pub gender: i8,
+    pub nickname: String,
+    pub r#type: u8,
+    pub name: Option<String>,
+    pub gender: u8,
     pub telephone: Option<String>,
 }
 
@@ -30,13 +30,13 @@ pub struct UserInput {
 pub struct UserOutput {
     pub id: i32,
     pub uid: String,
-    pub account_name: Option<String>,
-    pub name: String,
-    pub gender: i8,
+    pub nickname: String,
+    pub name: Option<String>,
+    pub gender: u8,
     pub telephone: Option<String>,
     pub email: Option<String>,
     pub address: Option<String>,
-    pub account_type: i8,
+    pub account_type: u8,
     #[serde(serialize_with = "format_option_date_time")]
     pub last_login_at: Option<DateTimeLocal>,
     #[serde(serialize_with = "format_date_time")]

@@ -12,6 +12,7 @@ mod logger;
 mod response;
 mod routes;
 mod states;
+mod tools;
 
 #[tokio::main]
 async fn main() {

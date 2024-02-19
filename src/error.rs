@@ -1,27 +1,34 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use sea_orm::DbErr;
+use thiserror::Error;
 
-// 定义一个自己的 `anyhow::Error`.
-// 实现 IntoResponse 的 AppError
-pub struct AppError(anyhow::Error);
+use crate::response::{EmptyStruct, JsonResponse};
 
+// 定义自定义错误类型
+#[derive(Error, Debug)]
+pub enum AppError {
+    #[error("数据库错误: {0}")]
+    DBError(#[from] DbErr),
+    #[error("Axum框架错误: {0}")]
+    AxumError(#[from] axum::Error),
+    #[error("自定义错误: {0}")]
+    Other(String),
+}
+
+// 实现 IntoResponse trait，以便能够将 MyError 直接转换为响应
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Something went wrong: {}", self.0),
-        )
-            .into_response()
+        let (status, error_message) = match self {
+            AppError::DBError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "数据库错误".to_string()),
+            AppError::AxumError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "服务错误".to_string()),
+            AppError::Other(e) => (StatusCode::BAD_REQUEST, e),
+            // ... 其他匹配
+        };
+        // 为什么需要在下方指定 <EmptyStruct> 明明结构体已经返回的是 EmptyStruct
+        let res = JsonResponse::<EmptyStruct>::error(status.as_u16(), error_message);
+        res.into_response()
     }
 }
 
-// This enables using `?` on functions that return `Result<_, anyhow::Error>` to turn them into
-// `Result<_, AppError>`. That way you don't need to do that manually.
-impl<E> From<E> for AppError
-where
-    E: Into<anyhow::Error>,
-{
-    fn from(err: E) -> Self {
-        Self(err.into())
-    }
-}
+pub type AppResult<T> = Result<JsonResponse<T>, AppError>;

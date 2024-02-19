@@ -2,6 +2,9 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Serialize;
 
+#[derive(Debug, Serialize, Default)]
+pub struct EmptyStruct {}
+
 #[derive(Debug, Serialize)]
 pub struct JsonResponse<T: Serialize> {
     code: u16,
@@ -23,8 +26,9 @@ where
     pub fn success(data: T) -> Self {
         Self::new(0, "OK".to_string(), Some(data))
     }
-    pub fn error(code: u16, msg: String) -> Self {
-        Self::new(code, msg, None)
+    pub fn error(code: u16, msg: String) -> JsonResponse<EmptyStruct> {
+        // 为什么Self 无法设置<>泛型
+        JsonResponse::new(code, msg, Some(EmptyStruct::default()))
     }
 }
 

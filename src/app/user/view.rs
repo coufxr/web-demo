@@ -32,7 +32,7 @@ pub async fn user_list(
         .filter(
             // 实现 字段存在及查询. 不存在则跳过
             Condition::all()
-                .add_option(Some(Account::Column::Type.eq(2)))
+                .add_option(input.r#type.map(|t| Account::Column::Type.eq(t)))
                 .add_option(input.name.map(|n| Account::Column::Name.contains(n)))
                 .add_option(
                     input

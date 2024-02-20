@@ -4,10 +4,7 @@ use axum::{
     extract::{Json, Path, Query},
     Extension,
 };
-use sea_orm::ActiveValue::Set;
-use sea_orm::{
-    ColumnTrait, Condition, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
-};
+use sea_orm::*;
 use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
@@ -71,10 +68,14 @@ pub async fn user_create(
         ..Default::default()
     };
 
-    Account::Entity::insert(obj)
-        .exec(&state.db)
-        .await
-        .map_err(AppError::from)?;
+    // 获取到整个新增模型属性 todo: 但不知如何将此模型返回给接口
+    let _obj: Account::Model = obj.insert(&state.db).await.map_err(AppError::from)?;
+
+    // 可以获取到自增id
+    // let a = Account::Entity::insert(obj)
+    //     .exec(&state.db)
+    //     .await
+    //     .map_err(AppError::from)?;
 
     Ok(JsonResponse::success(EmptyStruct::default()))
 }

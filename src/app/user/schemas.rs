@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct UserListInput {
     pub name: Option<String>,
     pub telephone: Option<String>,
+    pub r#type: Option<u8>,
     pub page: Option<u64>,
     pub page_size: Option<u64>,
 }

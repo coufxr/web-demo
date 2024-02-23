@@ -1,14 +1,19 @@
-use crate::tools::{format_date_time, format_option_date_time};
-use sea_orm::prelude::DateTimeLocal;
 use sea_orm::FromQueryResult;
+use sea_orm::prelude::DateTimeLocal;
 use serde::{Deserialize, Serialize};
+use serde_repr::*;
+use validator::Validate;
 
-#[derive(Serialize, Deserialize)]
+use crate::tools::{format_date_time, format_option_date_time};
+
+#[derive(Debug, Deserialize, Validate)]
 pub struct UserListInput {
     pub name: Option<String>,
     pub telephone: Option<String>,
     pub r#type: Option<u8>,
+    #[validate(range(min = 1))]
     pub page: Option<u64>,
+    #[validate(range(min = 5, max = 100))]
     pub page_size: Option<u64>,
 }
 
@@ -24,7 +29,7 @@ pub struct UserListOutput {
 
 #[derive(Deserialize)]
 pub struct UserInput {
-    pub id: i32,
+    pub id: u32,
 }
 
 #[derive(Default, Clone, Serialize, Deserialize, FromQueryResult)]
@@ -53,4 +58,22 @@ pub struct UserCreate {
     pub telephone: Option<String>,
     pub email: Option<String>,
     pub address: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct UserPatch {
+    pub nickname: Option<String>,
+    pub password: Option<String>,
+    pub name: Option<String>,
+    pub gender: Option<Gender>,
+    pub telephone: Option<String>,
+    pub email: Option<String>,
+    pub address: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize_repr, Deserialize_repr, PartialEq)]
+#[repr(u8)]
+pub enum Gender {
+    Male = 1,
+    Female = 2,
 }

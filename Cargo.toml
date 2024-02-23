@@ -7,8 +7,8 @@ edition = "2021"
 
 [dependencies]
 axum = "0.7.4"
-serde = { version = "1.0.196", features = ["derive"] }
-serde_json = "1.0.113"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
 tokio = { version = "1.36.0", features = ["full"] }
 # 日志
 tracing = "0.1.40"
@@ -25,8 +25,12 @@ sea-orm = { version = "0.12.12", features = [
 # 环境配置
 dotenvy = "0.15.7"
 # 错误处理
-anyhow = "1.0.79"
+anyhow = "1.0.80"
 thiserror = "1.0.57"
 # 日期处理
-chrono = "0.4.33"
+chrono = "0.4.34"
 uuid = { version = "1.7.0", features = ["v4"] }
+# 字段校验
+axum-valid = "0.15.0"
+validator = { version = "0.16.1", features = ["derive"] }
+serde_repr = "0.1.18"

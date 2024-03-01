@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Json, Path, Query},
     Extension,
+    extract::{Json, Path, Query},
 };
 use axum_valid::Valid;
-use sea_orm::ActiveValue::Set;
 use sea_orm::*;
+use sea_orm::ActiveValue::Set;
 use uuid::Uuid;
 
+use crate::entity::prelude::Account;
 use crate::error::{AppError, AppResult};
 use crate::response::{EmptyStruct, JsonResponse};
 use crate::states::AppState;
 
-use super::models::prelude::Account;
 use super::schemas::{UserCreate, UserInput, UserListInput, UserListOutput, UserOutput, UserPatch};
 
 // Extension 扩展引入需要与main中注册的元素一致
@@ -126,7 +126,7 @@ pub async fn user_patch(
         // 这个枚举的转换是否过于麻烦?
         let t = data.gender.unwrap();
         let g = serde_json::to_string(&t).unwrap();
-        obj.gender = Set(g.parse::<i8>().unwrap())
+        obj.gender = Set(Option::from(g.parse::<i8>().unwrap()))
     }
     if data.telephone.is_some() {
         obj.telephone = Set(data.telephone)

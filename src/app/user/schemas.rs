@@ -54,7 +54,7 @@ pub struct UserCreate {
     pub nickname: String,
     pub password: String,
     pub name: Option<String>,
-    pub gender: i8,
+    pub gender: Option<i8>,
     pub telephone: Option<String>,
     pub email: Option<String>,
     pub address: Option<String>,

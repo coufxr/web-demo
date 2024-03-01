@@ -14,9 +14,9 @@ tokio = { version = "1.36.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 tower = "0.4.13"
-tower-http = { version = "0.5.1", features = ["trace"] }
+tower-http = { version = "0.5.2", features = ["trace"] }
 # orm
-sea-orm = { version = "0.12.12", features = [
+sea-orm = { version = "0.12.14", features = [
     "sqlx-mysql",
     "runtime-tokio-native-tls",
     "macros",
@@ -31,6 +31,6 @@ thiserror = "1.0.57"
 chrono = "0.4.34"
 uuid = { version = "1.7.0", features = ["v4"] }
 # 字段校验
-axum-valid = "0.15.0"
+axum-valid = "0.16.0"
 validator = { version = "0.16.1", features = ["derive"] }
 serde_repr = "0.1.18"

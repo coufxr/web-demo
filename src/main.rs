@@ -1,12 +1,13 @@
-use std::str::FromStr;
 use std::{env, sync::Arc};
+use std::str::FromStr;
 
-use axum::{http::StatusCode, routing::get, Extension, Router};
+use axum::{Extension, http::StatusCode, Router, routing::get};
 use tower::ServiceBuilder;
 use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
 
 mod app;
+mod entity;
 mod error;
 mod logger;
 mod response;

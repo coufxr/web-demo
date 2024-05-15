@@ -44,9 +44,9 @@ pub struct UserOutput {
     pub address: Option<String>,
     pub r#type: i8,
     #[serde(serialize_with = "format_option_date_time")]
-    pub last_login_at: Option<DateTimeLocal>,
+    pub last_login_dt: Option<DateTimeLocal>,
     #[serde(serialize_with = "format_date_time")]
-    pub created_dt: DateTimeLocal,
+    pub create_ts: DateTimeLocal,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

@@ -17,10 +17,10 @@ pub struct Model {
     pub telephone: Option<String>,
     pub email: Option<String>,
     pub address: Option<String>,
-    pub last_login_at: Option<DateTimeLocal>,
-    pub created_dt: DateTimeLocal,
-    pub updated_dt: DateTimeLocal,
-    pub deleted_dt: Option<DateTimeLocal>,
+    pub last_login_dt: Option<DateTimeLocal>,
+    pub create_ts: DateTimeLocal,
+    pub update_ts: DateTimeLocal,
+    pub delete_ts: Option<DateTimeLocal>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

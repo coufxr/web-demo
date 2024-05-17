@@ -9,10 +9,10 @@ use sea_orm::*;
 use sea_orm::ActiveValue::Set;
 use uuid::Uuid;
 
+use crate::db::AppState;
 use crate::entity::prelude::Account;
 use crate::error::{AppError, AppResult};
 use crate::response::{EmptyStruct, JsonResponse};
-use crate::states::AppState;
 
 use super::schemas::{UserCreate, UserInput, UserListInput, UserListOutput, UserOutput, UserPatch};
 

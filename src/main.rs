@@ -1,35 +1,30 @@
-use std::{env, sync::Arc};
-use std::str::FromStr;
+use std::sync::Arc;
 
 use axum::{Extension, http::StatusCode, Router, routing::get};
 use tower::ServiceBuilder;
 use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
 
+use crate::configs::{Configs, FormEnv};
+
 mod app;
+pub mod configs;
+mod db;
 mod entity;
 mod error;
 mod logger;
 mod response;
 mod routes;
-mod states;
 mod tools;
 
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
-    let host = env::var("HOST").expect("HOST is not set in .env file");
-    let port = env::var("PORT").expect("PORT is not set in .env file");
-    let server_url = format!("{host}:{port}");
+    let cfg = Configs::form_env();
+    let _guard = logger::init(&cfg).await;
 
-    let logger_level = env::var("logger_level").expect("logger_level is not set in .env file");
-
-    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set in .env file");
-
-    let db = states::init_db_connection(db_url.as_str()).await;
-    let state = Arc::new(states::AppState { db });
-
-    logger::init_logger(Level::from_str(&logger_level).expect("Invalid log level"));
+    let db = db::init(&cfg).await;
+    let state = Arc::new(db::AppState { db });
 
     async fn fallback() -> (StatusCode, &'static str) {
         (StatusCode::NOT_FOUND, "Not Found")
@@ -48,6 +43,8 @@ async fn main() {
                 )
                 .layer(Extension(state)),
         );
+
+    let server_url = format!("{}:{}", &cfg.server.host, &cfg.server.port);
 
     let listener = tokio::net::TcpListener::bind(server_url).await.unwrap();
     info!("listening on {}", listener.local_addr().unwrap());

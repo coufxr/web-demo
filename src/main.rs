@@ -1,14 +1,15 @@
 use std::sync::Arc;
 
-use axum::{Extension, http::StatusCode, Router, routing::get};
+use axum::{Extension, Router, routing::get};
 use tower::ServiceBuilder;
 use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
 
 use crate::configs::{Configs, FormEnv};
+use crate::routes::fallback;
 
 mod app;
-pub mod configs;
+mod configs;
 mod db;
 mod entity;
 mod error;
@@ -26,10 +27,6 @@ async fn main() {
     let db = db::init(&cfg).await;
     let state = Arc::new(db::AppState { db });
 
-    async fn fallback() -> (StatusCode, &'static str) {
-        (StatusCode::NOT_FOUND, "Not Found")
-    }
-
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" })) // 根路由
         .nest("/api/v1", routes::v1_routes()) // 路由嵌套方式
@@ -38,8 +35,8 @@ async fn main() {
             ServiceBuilder::new()
                 .layer(
                     TraceLayer::new_for_http()
-                        .make_span_with(trace::DefaultMakeSpan::new().level(Level::DEBUG))
-                        .on_response(trace::DefaultOnResponse::new().level(Level::DEBUG)),
+                        .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
+                        .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
                 )
                 .layer(Extension(state)),
         );
@@ -48,5 +45,6 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind(server_url).await.unwrap();
     info!("listening on {}", listener.local_addr().unwrap());
+
     axum::serve(listener, app).await.unwrap();
 }

@@ -14,9 +14,9 @@ pub struct Server {
 
 impl FormEnv for Server {
     fn form_env() -> Self {
-        let host = env::var("HOST").expect("HOST is not set in .env file");
-        let port = env::var("PORT").expect("PORT is not set in .env file");
-        let env = env::var("ENV").expect("ENV is not set in .env file");
+        let host = env::var("HOST").unwrap_or("127.0.0.1".to_string());
+        let port = env::var("PORT").unwrap_or("8000".to_string());
+        let env = env::var("ENV").unwrap_or("local".to_string());
 
         Self {
             host,
@@ -35,7 +35,7 @@ pub struct Log {
 
 impl FormEnv for Log {
     fn form_env() -> Self {
-        let level = env::var("LEVEL").expect("level is not set in .env file");
+        let level = env::var("LEVEL").unwrap_or("INFO".to_string());
         let path = env::var("PATH").expect("path is not set in .env file");
         let filename = env::var("FILENAME").expect("filename is not set in .env file");
 
@@ -68,7 +68,7 @@ impl Db {
 
 impl FormEnv for Db {
     fn form_env() -> Self {
-        let debug = env::var("DATABASE_DEBUG").expect("DEBUG is not set in .env file");
+        let debug = env::var("DATABASE_DEBUG").unwrap_or("false".to_string());
         let host = env::var("DATABASE_HOST").expect("DATABASE_HOST is not set in .env file");
         let port = env::var("DATABASE_PORT").expect("DATABASE_PORT is not set in .env file");
         let username =

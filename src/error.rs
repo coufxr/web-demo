@@ -3,8 +3,9 @@ use axum::response::{IntoResponse, Response};
 use sea_orm::DbErr;
 use thiserror::Error;
 use tracing::error;
+use validator::ValidationErrors;
 
-use crate::response::{EmptyStruct, JsonResponse};
+use crate::response::HttpException;
 
 // 定义自定义错误类型
 #[derive(Error, Debug)]
@@ -13,6 +14,8 @@ pub enum AppError {
     DBError(#[from] DbErr),
     #[error("Axum框架错误: {0}")]
     AxumError(#[from] axum::Error),
+    #[error("Validate框架错误: {0}")]
+    ValidatorError(ValidationErrors),
     #[error("自定义错误: {0}")]
     Other(String),
 }
@@ -23,14 +26,19 @@ impl IntoResponse for AppError {
         let (status, error_message) = match self {
             AppError::DBError(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#?}")),
             AppError::AxumError(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#?}")),
+            AppError::ValidatorError(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#?}")),
             AppError::Other(e) => (StatusCode::BAD_REQUEST, e),
             // ... 其他匹配
         };
-        // 为什么需要在下方指定 <EmptyStruct> 明明结构体已经返回的是 EmptyStruct
         error!("err info: {}", error_message);
-        let res = JsonResponse::<EmptyStruct>::error(status.as_u16(), error_message);
-        res.into_response()
+        HttpException::new(status.as_u16(), error_message).into_response()
     }
 }
 
-pub type AppResult<T> = Result<JsonResponse<T>, AppError>;
+impl From<ValidationErrors> for AppError {
+    fn from(errors: ValidationErrors) -> Self {
+        AppError::ValidatorError(errors)
+    }
+}
+
+pub type AppResult<T> = Result<T, AppError>;

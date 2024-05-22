@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::db::AppState;
 use crate::entity::prelude::Account;
 use crate::error::{AppError, AppResult};
-use crate::response::{EmptyStruct, JsonResponse};
+use crate::response::JsonResponse;
 
 use super::schemas::{UserCreate, UserInput, UserListInput, UserListOutput, UserOutput, UserPatch};
 
@@ -20,7 +20,7 @@ use super::schemas::{UserCreate, UserInput, UserListInput, UserListOutput, UserO
 pub async fn user_list(
     Extension(state): Extension<Arc<AppState>>,
     Valid(Query(input)): Valid<Query<UserListInput>>,
-) -> AppResult<Vec<UserListOutput>> {
+) -> AppResult<JsonResponse<Vec<UserListOutput>>> {
     let data = Account::Entity::find()
         .select_only() // 指定加载哪些字段
         .columns([
@@ -50,13 +50,13 @@ pub async fn user_list(
         .await
         .map_err(AppError::from)?;
 
-    Ok(JsonResponse::success(data))
+    Ok(JsonResponse::new(data))
 }
 
 pub async fn user_create(
     Extension(state): Extension<Arc<AppState>>,
     Json(input): Json<UserCreate>,
-) -> AppResult<EmptyStruct> {
+) -> AppResult<JsonResponse<()>> {
     let obj = Account::ActiveModel {
         uid: Set(Uuid::new_v4().to_string()),
         nickname: Set(input.nickname),
@@ -79,13 +79,13 @@ pub async fn user_create(
     //     .await
     //     .map_err(AppError::from)?;
 
-    Ok(JsonResponse::success(EmptyStruct::default()))
+    Ok(JsonResponse::new(()))
 }
 
 pub async fn user_detail(
     Extension(state): Extension<Arc<AppState>>,
     Path(input): Path<UserInput>,
-) -> AppResult<UserOutput> {
+) -> AppResult<JsonResponse<UserOutput>> {
     let qs = Account::Entity::find_by_id(input.id as i32)
         .into_model::<UserOutput>()
         .one(&state.db)
@@ -97,14 +97,14 @@ pub async fn user_detail(
         return Err(AppError::Other("未找到对应数据".to_string()));
     }
 
-    Ok(JsonResponse::success(qs.unwrap()))
+    Ok(JsonResponse::new(qs.unwrap()))
 }
 
 pub async fn user_patch(
     Extension(state): Extension<Arc<AppState>>,
     Path(id): Path<u32>,
     Json(data): Json<UserPatch>,
-) -> AppResult<EmptyStruct> {
+) -> AppResult<JsonResponse<()>> {
     let mut obj = Account::Entity::find_by_id(id as i32)
         .one(&state.db)
         .await
@@ -140,13 +140,13 @@ pub async fn user_patch(
 
     let _obj = obj.update(&state.db).await.map_err(AppError::from)?;
 
-    Ok(JsonResponse::success(EmptyStruct::default()))
+    Ok(JsonResponse::new(()))
 }
 
 pub async fn user_delete(
     Extension(state): Extension<Arc<AppState>>,
     Path(id): Path<u32>,
-) -> AppResult<EmptyStruct> {
+) -> AppResult<JsonResponse<()>> {
     let obj = Account::Entity::find_by_id(id as i32)
         .one(&state.db)
         .await
@@ -157,5 +157,5 @@ pub async fn user_delete(
     let res = obj.delete(&state.db).await.map_err(AppError::from)?;
     assert_eq!(res.rows_affected, 1);
 
-    Ok(JsonResponse::success(EmptyStruct::default()))
+    Ok(JsonResponse::new(()))
 }

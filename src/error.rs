@@ -1,6 +1,7 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sea_orm::DbErr;
+use serde_json::json;
 use thiserror::Error;
 use tracing::error;
 use validator::ValidationErrors;
@@ -24,9 +25,11 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            AppError::DBError(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#?}")),
-            AppError::AxumError(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#?}")),
-            AppError::ValidatorError(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#?}")),
+            AppError::DBError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            AppError::AxumError(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            AppError::ValidatorError(e) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, json!(e).to_string())
+            }
             AppError::Other(e) => (StatusCode::BAD_REQUEST, e),
             // ... 其他匹配
         };

@@ -4,10 +4,10 @@ use axum::{
     Extension,
     extract::{Json, Path, Query},
 };
-use axum_valid::Valid;
 use sea_orm::*;
 use sea_orm::ActiveValue::Set;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::db::AppState;
 use crate::entity::prelude::Account;
@@ -19,8 +19,11 @@ use super::schemas::{UserCreate, UserInput, UserListInput, UserListOutput, UserO
 // Extension 扩展引入需要与main中注册的元素一致
 pub async fn user_list(
     Extension(state): Extension<Arc<AppState>>,
-    Valid(Query(input)): Valid<Query<UserListInput>>,
+    Query(input): Query<UserListInput>, // 放在此处 axum 会直接返回,不会经过处理
 ) -> AppResult<JsonResponse<Vec<UserListOutput>>> {
+    // 在函数内部返回验证错误能够被 AppError 处理
+    input.validate()?;
+
     let data = Account::Entity::find()
         .select_only() // 指定加载哪些字段
         .columns([

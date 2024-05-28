@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::{Extension, Router, routing::get};
 use tower::ServiceBuilder;
+use tower_http::compression::CompressionLayer;
 use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
 
@@ -27,23 +28,26 @@ async fn main() {
     let db = db::init(&cfg).await;
     let state = Arc::new(db::AppState { db });
 
+    // 请求日志
+    let trace = TraceLayer::new_for_http()
+        .make_span_with(
+            trace::DefaultMakeSpan::new()
+                .include_headers(true) // 包含请求头
+                .level(Level::INFO),
+        )
+        .on_response(trace::DefaultOnResponse::new().level(Level::INFO)); // 请求结束时的行为
+
+    // 中间件
+    let middleware_stack = ServiceBuilder::new()
+        .layer(trace)
+        .layer(CompressionLayer::new()) // 启用Brotli压缩
+        .layer(Extension(state));
+
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" })) // 根路由
         .nest("/api/v1", routes::v1_routes()) // 路由嵌套方式
-        .fallback(fallback)
-        .layer(
-            ServiceBuilder::new()
-                .layer(
-                    TraceLayer::new_for_http()
-                        .make_span_with(
-                            trace::DefaultMakeSpan::new()
-                                .include_headers(true) // 包含请求头
-                                .level(Level::INFO),
-                        )
-                        .on_response(trace::DefaultOnResponse::new().level(Level::INFO)), // 请求结束时的行为
-                )
-                .layer(Extension(state)),
-        );
+        .fallback(fallback) // 路由错误处理
+        .layer(middleware_stack);
 
     let server_url = format!("{}:{}", &cfg.server.host, &cfg.server.port);
 

@@ -35,8 +35,12 @@ async fn main() {
             ServiceBuilder::new()
                 .layer(
                     TraceLayer::new_for_http()
-                        .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
-                        .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
+                        .make_span_with(
+                            trace::DefaultMakeSpan::new()
+                                .include_headers(true) // 包含请求头
+                                .level(Level::INFO),
+                        )
+                        .on_response(trace::DefaultOnResponse::new().level(Level::INFO)), // 请求结束时的行为
                 )
                 .layer(Extension(state)),
         );

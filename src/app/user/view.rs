@@ -126,10 +126,8 @@ pub async fn user_patch(
     }
 
     if data.gender.is_some() {
-        // 这个枚举的转换是否过于麻烦?
-        let t = data.gender.unwrap();
-        let g = serde_json::to_string(&t).unwrap();
-        obj.gender = Set(Option::from(g.parse::<i8>().unwrap()))
+        // repr 可通过 as 直接转换
+        obj.gender = Set(Some(data.gender.unwrap() as i8))
     }
     if data.telephone.is_some() {
         obj.telephone = Set(data.telephone)

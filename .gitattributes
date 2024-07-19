@@ -1,0 +1,15 @@
+# 设置所有文本文件使用 LF（Unix-style）作为行尾
+* text eol=lf
+
+# 对于 Rust 源代码文件，确保使用 UTF-8 编码
+*.rs text encoding=utf-8
+
+# 对于 Markdown 文件，也确保使用 LF 并且是 UTF-8 编码
+*.md text eol=lf encoding=utf-8
+
+# 如果有一些二进制文件，比如图片或字体，确保不作为文本处理
+*.png binary
+*.ttf binary
+
+# 对于Cargo.lock文件，确保总是提交到仓库
+Cargo.lock -crlf

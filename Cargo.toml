@@ -23,8 +23,6 @@ sea-orm = { version = "0.12.15", features = [
     "macros",
     "debug-print",
 ] }
-# 环境配置
-dotenvy = "0.15.7"
 # 错误处理
 anyhow = "1.0.86"
 thiserror = "1.0.60"
@@ -35,3 +33,5 @@ uuid = { version = "1.8.0", features = ["v4"] }
 axum-valid = "0.18.0"
 validator = { version = "0.18.1", features = ["derive"] }
 serde_repr = "0.1.19"
+# 环境配置
+config = "0.14.0"

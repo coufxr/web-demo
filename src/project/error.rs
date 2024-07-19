@@ -6,7 +6,7 @@ use thiserror::Error;
 use tracing::error;
 use validator::ValidationErrors;
 
-use crate::response::HttpException;
+use super::response::HttpException;
 
 // 定义自定义错误类型
 #[derive(Error, Debug)]

@@ -1,18 +1,17 @@
 use std::sync::Arc;
 
+use crate::constants::AppState;
+use crate::entity::prelude::Account;
+use crate::project::error::{AppError, AppResult};
+use crate::project::response::JsonResponse;
 use axum::{
-    Extension,
     extract::{Json, Path, Query},
+    Extension,
 };
-use sea_orm::*;
 use sea_orm::ActiveValue::Set;
+use sea_orm::*;
 use uuid::Uuid;
 use validator::Validate;
-
-use crate::db::AppState;
-use crate::entity::prelude::Account;
-use crate::error::{AppError, AppResult};
-use crate::response::JsonResponse;
 
 use super::schemas::{UserCreate, UserInput, UserListInput, UserListOutput, UserOutput, UserPatch};
 

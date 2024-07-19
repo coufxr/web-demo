@@ -1,0 +1,17 @@
+[app]
+HOST=
+PORT=
+ENV=
+
+[log]
+LEVEL=
+PATH=
+FILENAME=
+
+[database]
+DEBUG=
+HOST=
+PORT=
+USERNAME=
+PASSWORD=
+DBNAME=

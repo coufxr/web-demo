@@ -1,32 +1,27 @@
 use std::sync::Arc;
 
-use axum::{Extension, Router, routing::get};
+use axum::{routing::get, Extension, Router};
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
 
-use crate::configs::{Configs, FormEnv};
-use crate::routes::fallback;
+use constants::AppState;
+use project::{configs::Configs, db, fallback, logger};
 
-mod app;
-mod configs;
-mod db;
+mod apps;
+mod constants;
 mod entity;
-mod error;
-mod logger;
-mod response;
-mod routes;
-mod tools;
+mod helper;
+mod project;
 
 #[tokio::main]
 async fn main() {
-    dotenvy::dotenv().ok();
-    let cfg = Configs::form_env();
+    let cfg = Configs::new();
     let _guard = logger::init(&cfg).await;
 
-    let db = db::init(&cfg).await;
-    let state = Arc::new(db::AppState { db });
+    let db = db::init(&cfg.database).await;
+    let state = Arc::new(AppState { db });
 
     // 请求日志
     let trace = TraceLayer::new_for_http()
@@ -45,11 +40,11 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" })) // 根路由
-        .nest("/api/v1", routes::v1_routes()) // 路由嵌套方式
+        .nest("/api/v1", apps::v1_routes()) // 路由嵌套方式
         .fallback(fallback) // 路由错误处理
         .layer(middleware_stack);
 
-    let server_url = format!("{}:{}", &cfg.server.host, &cfg.server.port);
+    let server_url = format!("{}:{}", &cfg.app.host, &cfg.app.port);
 
     let listener = tokio::net::TcpListener::bind(server_url).await.unwrap();
     info!("listening on {}", listener.local_addr().unwrap());

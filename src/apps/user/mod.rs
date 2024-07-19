@@ -1,6 +1,10 @@
-use axum::{Router, routing::get};
+mod view;
 
-use super::view::{user_create, user_delete, user_detail, user_list, user_patch};
+pub mod schemas;
+
+use axum::{routing::get, Router};
+
+use view::{user_create, user_delete, user_detail, user_list, user_patch};
 
 pub fn user_routes() -> Router {
     Router::new()

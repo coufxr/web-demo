@@ -1,24 +1,19 @@
 use std::time::Duration;
 
-use sea_orm::{ConnectOptions, Database, DatabaseConnection};
+use sea_orm::{ConnectOptions, Database, DbConn};
 use tracing::info;
 
-use crate::configs::Configs;
+use super::configs::Database as cfg_database;
 
-#[derive(Clone)]
-pub struct AppState {
-    pub db: DatabaseConnection,
-}
-
-pub async fn init(cfg: &Configs) -> DatabaseConnection {
-    let mut opt = ConnectOptions::new(&cfg.db.url());
+pub async fn init(db: &cfg_database) -> DbConn {
+    let mut opt = ConnectOptions::new(db.url());
     // 设置连接池大小和其他选项
     opt.min_connections(10)
         .max_connections(5)
         .connect_timeout(Duration::from_secs(5))
         .idle_timeout(Duration::from_secs(5))
         .max_lifetime(Duration::from_secs(5))
-        .sqlx_logging(cfg.db.debug);
+        .sqlx_logging(db.debug);
 
     let conn = Database::connect(opt)
         .await

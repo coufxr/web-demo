@@ -23,3 +23,6 @@ rust-project.json
 .idea/
 .env
 .code/
+
+# 配置文件不需要提交
+config.toml

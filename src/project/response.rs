@@ -7,7 +7,7 @@ use serde::Serialize;
 pub struct JsonResponse<T: Serialize> {
     code: u16,
     message: String,
-    data: T,
+    data: Option<T>,
 }
 
 impl<T: Serialize> JsonResponse<T> {
@@ -15,7 +15,15 @@ impl<T: Serialize> JsonResponse<T> {
         Self {
             code: StatusCode::OK.as_u16(),
             message: StatusCode::OK.to_string(),
-            data,
+            data: Some(data),
+        }
+    }
+
+    pub fn error(code: StatusCode, message: String) -> Self {
+        Self {
+            code: code.as_u16(),
+            message,
+            data: None,
         }
     }
 }
@@ -24,24 +32,6 @@ impl<T> IntoResponse for JsonResponse<T>
 where
     T: Serialize,
 {
-    fn into_response(self) -> Response {
-        Json(self).into_response()
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct HttpException {
-    code: u16,
-    message: String,
-}
-
-impl HttpException {
-    pub fn new(code: u16, message: String) -> Self {
-        Self { code, message }
-    }
-}
-
-impl IntoResponse for HttpException {
     fn into_response(self) -> Response {
         Json(self).into_response()
     }

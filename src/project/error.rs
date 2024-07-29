@@ -6,8 +6,6 @@ use thiserror::Error;
 use tracing::error;
 use validator::ValidationErrors;
 
-use super::response::HttpException;
-
 // 定义自定义错误类型
 #[derive(Error, Debug)]
 pub enum AppError {
@@ -34,7 +32,8 @@ impl IntoResponse for AppError {
             // ... 其他匹配
         };
         error!("err info: {}", error_message);
-        HttpException::new(status.as_u16(), error_message).into_response()
+        // 只返回错误码和错误信息, 中间件会处理成 JsonResponse
+        (status, error_message).into_response()
     }
 }
 

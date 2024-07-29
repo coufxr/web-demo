@@ -1,5 +1,6 @@
 mod view;
 
+pub mod constants;
 pub mod schemas;
 
 use axum::{routing::get, Router};

@@ -1,9 +1,9 @@
 use sea_orm::prelude::DateTimeLocal;
 use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
-use serde_repr::*;
 use validator::Validate;
 
+use crate::apps::user::constants::GenderType;
 use crate::helper::tools::{format_date_time, format_option_date_time};
 
 #[derive(Debug, Deserialize, Validate)]
@@ -54,7 +54,7 @@ pub struct UserCreate {
     pub nickname: String,
     pub password: String,
     pub name: Option<String>,
-    pub gender: Option<i8>,
+    pub gender: Option<GenderType>,
     pub telephone: Option<String>,
     pub email: Option<String>,
     pub address: Option<String>,
@@ -65,15 +65,8 @@ pub struct UserPatch {
     pub nickname: Option<String>,
     pub password: Option<String>,
     pub name: Option<String>,
-    pub gender: Option<Gender>,
+    pub gender: Option<GenderType>,
     pub telephone: Option<String>,
     pub email: Option<String>,
     pub address: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize_repr, Deserialize_repr, PartialEq)]
-#[repr(u8)]
-pub enum Gender {
-    Male = 1,
-    Female = 2,
 }

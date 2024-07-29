@@ -1,9 +1,5 @@
 use std::sync::Arc;
 
-use crate::constants::AppState;
-use crate::entity::prelude::Account;
-use crate::project::error::{AppError, AppResult};
-use crate::project::response::JsonResponse;
 use axum::{
     extract::{Json, Path, Query},
     Extension,
@@ -13,13 +9,18 @@ use sea_orm::*;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::constants::AppState;
+use crate::entity::prelude::Account;
+use crate::project::error::{AppError, AppResult};
+
+use super::constants::ClassType;
 use super::schemas::{UserCreate, UserInput, UserListInput, UserListOutput, UserOutput, UserPatch};
 
 // Extension 扩展引入需要与main中注册的元素一致
 pub async fn user_list(
     Extension(state): Extension<Arc<AppState>>,
     Query(input): Query<UserListInput>, // 放在此处 axum 会直接返回,不会经过处理
-) -> AppResult<JsonResponse<Vec<UserListOutput>>> {
+) -> AppResult<Json<Vec<UserListOutput>>> {
     // 在函数内部返回验证错误能够被 AppError 处理
     input.validate()?;
 
@@ -52,13 +53,13 @@ pub async fn user_list(
         .await
         .map_err(AppError::from)?;
 
-    Ok(JsonResponse::new(data))
+    Ok(Json(data))
 }
 
 pub async fn user_create(
     Extension(state): Extension<Arc<AppState>>,
     Json(input): Json<UserCreate>,
-) -> AppResult<JsonResponse<()>> {
+) -> AppResult<Json<()>> {
     let obj = Account::ActiveModel {
         uid: Set(Uuid::new_v4().to_string()),
         nickname: Set(input.nickname),
@@ -68,7 +69,7 @@ pub async fn user_create(
         telephone: Set(input.telephone),
         email: Set(input.email),
         address: Set(input.address),
-        r#type: Set(1),
+        r#type: Set(ClassType::User),
         ..Default::default()
     };
 
@@ -81,13 +82,13 @@ pub async fn user_create(
     //     .await
     //     .map_err(AppError::from)?;
 
-    Ok(JsonResponse::new(()))
+    Ok(Json(()))
 }
 
 pub async fn user_detail(
     Extension(state): Extension<Arc<AppState>>,
     Path(input): Path<UserInput>,
-) -> AppResult<JsonResponse<UserOutput>> {
+) -> AppResult<Json<UserOutput>> {
     let qs = Account::Entity::find_by_id(input.id as i32)
         .into_model::<UserOutput>()
         .one(&state.db)
@@ -99,14 +100,14 @@ pub async fn user_detail(
         return Err(AppError::Other("未找到对应数据".to_string()));
     }
 
-    Ok(JsonResponse::new(qs.unwrap()))
+    Ok(Json(qs.unwrap()))
 }
 
 pub async fn user_patch(
     Extension(state): Extension<Arc<AppState>>,
     Path(id): Path<u32>,
     Json(data): Json<UserPatch>,
-) -> AppResult<JsonResponse<()>> {
+) -> AppResult<Json<()>> {
     let mut obj = Account::Entity::find_by_id(id as i32)
         .one(&state.db)
         .await
@@ -126,7 +127,7 @@ pub async fn user_patch(
 
     if data.gender.is_some() {
         // repr 可通过 as 直接转换
-        obj.gender = Set(Some(data.gender.unwrap() as i8))
+        obj.gender = Set(data.gender)
     }
     if data.telephone.is_some() {
         obj.telephone = Set(data.telephone)
@@ -140,13 +141,13 @@ pub async fn user_patch(
 
     let _obj = obj.update(&state.db).await.map_err(AppError::from)?;
 
-    Ok(JsonResponse::new(()))
+    Ok(Json(()))
 }
 
 pub async fn user_delete(
     Extension(state): Extension<Arc<AppState>>,
     Path(id): Path<u32>,
-) -> AppResult<JsonResponse<()>> {
+) -> AppResult<Json<()>> {
     let obj = Account::Entity::find_by_id(id as i32)
         .one(&state.db)
         .await
@@ -157,5 +158,5 @@ pub async fn user_delete(
     let res = obj.delete(&state.db).await.map_err(AppError::from)?;
     assert_eq!(res.rows_affected, 1);
 
-    Ok(JsonResponse::new(()))
+    Ok(Json(()))
 }

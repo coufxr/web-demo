@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use axum::{routing::get, Extension, Router};
+use axum::{middleware, routing::get, Extension, Router};
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
 
 use constants::AppState;
-use project::{configs::Configs, db, fallback, logger};
+use project::{configs::Configs, db, fallback, logger, middlewares::response::redirect_response};
 
 mod apps;
 mod constants;
@@ -36,7 +36,8 @@ async fn main() {
     let middleware_stack = ServiceBuilder::new()
         .layer(trace)
         .layer(CompressionLayer::new()) // 启用Brotli压缩
-        .layer(Extension(state));
+        .layer(Extension(state))
+        .layer(middleware::from_fn(redirect_response));
 
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" })) // 根路由

@@ -1,3 +1,5 @@
+use std::str::from_utf8;
+
 use axum::{
     extract::Request,
     http::StatusCode,
@@ -14,8 +16,7 @@ pub async fn redirect_response(
     next: Next,
 ) -> Result<impl IntoResponse, Response> {
     let res = next.run(request).await;
-
-    let (_, body) = res.into_parts();
+    let (parts, body) = res.into_parts();
     let bytes = body
         .collect()
         .await
@@ -24,13 +25,17 @@ pub async fn redirect_response(
 
     // 将byte转为可读文本
     let str = serde_json::from_slice::<Value>(&bytes);
-
-    // 初始化JsonResponse
-    let response = match str {
-        Ok(s) => JsonResponse::new(s),
-        Err(e) => JsonResponse::error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+    let data = match str {
+        Ok(s) => s,
+        Err(_) => Value::from(from_utf8(&bytes).unwrap().to_string()),
+    };
+    // 无法在 Response 没有结果值时返回 {}
+    let response = if parts.status == StatusCode::OK {
+        JsonResponse::success(data)
+    } else {
+        JsonResponse::new(parts.status.as_u16(), parts.status.to_string(), Some(data))
     };
 
     //返回 Response
-    Ok(response)
+    Ok(Response::from_parts(parts, response.into_response()))
 }

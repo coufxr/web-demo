@@ -11,21 +11,25 @@ pub struct JsonResponse<T: Serialize> {
 }
 
 impl<T: Serialize> JsonResponse<T> {
-    pub fn new(data: T) -> Self {
+    pub fn new(code: u16, msg: String, data: Option<T>) -> Self {
         Self {
-            code: StatusCode::OK.as_u16(),
-            message: StatusCode::OK.to_string(),
-            data: Some(data),
+            code,
+            message: msg,
+            data,
         }
     }
 
-    pub fn error(code: StatusCode, message: String) -> Self {
-        Self {
-            code: code.as_u16(),
-            message,
-            data: None,
-        }
+    pub fn success(data: T) -> Self {
+        Self::new(
+            StatusCode::OK.as_u16(),
+            StatusCode::OK.to_string(),
+            Some(data),
+        )
     }
+
+    // pub fn error(code: StatusCode, message: String) -> Self {
+    //     Self::new(code.as_u16(), message, None)
+    // }
 }
 
 impl<T> IntoResponse for JsonResponse<T>

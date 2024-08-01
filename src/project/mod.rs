@@ -1,6 +1,5 @@
 use axum::http::StatusCode;
-use error::AppResult;
-use response::JsonResponse;
+use axum::response::{IntoResponse, Response};
 
 pub mod configs;
 pub mod db;
@@ -9,9 +8,6 @@ pub mod logger;
 pub mod middlewares;
 pub mod response;
 
-pub async fn fallback() -> AppResult<JsonResponse<()>> {
-    Ok(JsonResponse::error(
-        StatusCode::NOT_FOUND,
-        StatusCode::NOT_FOUND.to_string(),
-    ))
+pub async fn fallback() -> Response {
+    (StatusCode::NOT_FOUND, StatusCode::NOT_FOUND.to_string()).into_response()
 }

@@ -7,33 +7,31 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = "0.7.5"
-serde = { version = "1.0.204", features = ["derive"] }
-serde_json = "1.0.121"
-tokio = { version = "1.43.1", features = ["full"] }
+axum = "0.8.3"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+tokio = { version = "1.44.2", features = ["full"] }
 # 日志
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
 tracing-appender = "0.2.3"
 tower = { version = "0.4.13", features = ["full"] }
 tower-http = { version = "0.5.2", features = ["trace", "compression-br"] }
 # orm
-sea-orm = { version = "1.0.0-rc.7", features = [
+sea-orm = { version = "1.1.8", features = [
     "sqlx-mysql",
     "runtime-tokio-rustls",
     "macros",
     "debug-print",
 ] }
 # 错误处理
-anyhow = "1.0.86"
-thiserror = "1.0.63"
+thiserror = "1.0.69"
 # 日期处理
-chrono = "0.4.38"
-uuid = { version = "1.10.0", features = ["v4"] }
+chrono = "0.4.40"
+uuid = { version = "1.16.0", features = ["v4"] }
 # 字段校验
-axum-valid = "0.19.0"
 validator = { version = "0.18.1", features = ["derive"] }
-serde_repr = "0.1.19"
+serde_repr = "0.1.20"
 # 环境配置
-config = "0.14.0"
-http-body-util = "0.1.2"
+config = "0.14.1"
+http-body-util = "0.1.3"

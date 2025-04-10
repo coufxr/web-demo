@@ -14,7 +14,7 @@ use crate::entity::prelude::Account;
 use crate::project::error::{AppError, AppResult};
 
 use super::constants::ClassType;
-use super::schemas::{UserCreate, UserInput, UserListInput, UserListOutput, UserOutput, UserPatch};
+use super::schemas::{UserCreate, UserListInput, UserListOutput, UserOutput, UserPatch};
 
 // Extension 扩展引入需要与main中注册的元素一致
 pub async fn user_list(
@@ -87,9 +87,9 @@ pub async fn user_create(
 
 pub async fn user_detail(
     Extension(state): Extension<Arc<AppState>>,
-    Path(input): Path<UserInput>,
+    Path(id): Path<u32>,
 ) -> AppResult<Json<UserOutput>> {
-    let qs = Account::Entity::find_by_id(input.id as i32)
+    let qs = Account::Entity::find_by_id(id as i32)
         .into_model::<UserOutput>()
         .one(&state.db)
         .await

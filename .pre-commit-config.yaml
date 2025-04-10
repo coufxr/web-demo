@@ -51,7 +51,7 @@ repos:
       - id: cargo-test
         name: cargo test
         description: unit test for the project
-        entry: bash -c 'cargo nextest run --all-features --workspace'
+        entry: bash -c 'cargo nextest run --all-features --workspace --no-tests pass'
         language: rust
         files: \.rs$
         pass_filenames: false

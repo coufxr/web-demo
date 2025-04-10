@@ -27,11 +27,6 @@ pub struct UserListOutput {
     pub telephone: Option<String>,
 }
 
-#[derive(Deserialize)]
-pub struct UserInput {
-    pub id: u32,
-}
-
 #[derive(Default, Clone, Serialize, Deserialize, FromQueryResult)]
 pub struct UserOutput {
     pub id: i32,

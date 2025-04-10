@@ -11,7 +11,7 @@ pub fn user_routes() -> Router {
     Router::new()
         .route("/", get(user_list).post(user_create))
         .route(
-            "/:id",
+            "/{id}",
             get(user_detail).patch(user_patch).delete(user_delete),
         )
 }

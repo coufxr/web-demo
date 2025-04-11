@@ -7,6 +7,7 @@ use tower_http::trace::{self, TraceLayer};
 use tracing::{info, Level};
 
 use constants::AppState;
+use migration::MigratorTrait;
 use project::{configs::Configs, db, fallback, logger, middlewares::response::redirect_response};
 
 mod apps;
@@ -15,6 +16,7 @@ mod entity;
 mod helper;
 mod project;
 
+
 #[tokio::main]
 async fn main() {
     let cfg = Configs::new();
@@ -22,6 +24,10 @@ async fn main() {
 
     let db = db::init(&cfg.database).await;
     let state = Arc::new(AppState { db });
+
+    migration::Migrator::up(&state.db, None)
+        .await
+        .expect("数据库生成失败");
 
     // 请求日志
     let trace = TraceLayer::new_for_http()

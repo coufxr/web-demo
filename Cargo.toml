@@ -6,7 +6,11 @@ license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = [".", "migration"]
+
 [dependencies]
+migration = { path = "migration" }
 axum = "0.8.3"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
@@ -15,8 +19,8 @@ tokio = { version = "1.44.2", features = ["full"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
 tracing-appender = "0.2.3"
-tower = { version = "0.4.13", features = ["full"] }
-tower-http = { version = "0.5.2", features = ["trace", "compression-br"] }
+tower = { version = "0.5.2", features = ["full"] }
+tower-http = { version = "0.6.2", features = ["trace", "compression-br"] }
 # orm
 sea-orm = { version = "1.1.8", features = [
     "sqlx-mysql",
@@ -25,13 +29,13 @@ sea-orm = { version = "1.1.8", features = [
     "debug-print",
 ] }
 # 错误处理
-thiserror = "1.0.69"
+thiserror = "2.0.12"
 # 日期处理
 chrono = "0.4.40"
 uuid = { version = "1.16.0", features = ["v4"] }
 # 字段校验
-validator = { version = "0.18.1", features = ["derive"] }
+validator = { version = "0.20.0", features = ["derive"] }
 serde_repr = "0.1.20"
 # 环境配置
-config = "0.14.1"
+config = "0.15.11"
 http-body-util = "0.1.3"

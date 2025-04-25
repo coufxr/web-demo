@@ -3,14 +3,14 @@ use sea_orm::FromQueryResult;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::apps::user::constants::GenderType;
+use crate::apps::user::constants::{ClassType, GenderType};
 use crate::helper::tools::{format_date_time, format_option_date_time};
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct UserListInput {
     pub name: Option<String>,
     pub telephone: Option<String>,
-    pub r#type: Option<u8>,
+    pub r#type: Option<ClassType>,
     #[validate(range(min = 1))]
     pub page: Option<u64>,
     #[validate(range(min = 5, max = 100))]
@@ -21,9 +21,9 @@ pub struct UserListInput {
 pub struct UserListOutput {
     pub id: i32,
     pub nickname: String,
-    pub r#type: i8,
+    pub r#type: ClassType,
     pub name: Option<String>,
-    pub gender: i8,
+    pub gender: Option<GenderType>,
     pub telephone: Option<String>,
 }
 
@@ -33,11 +33,11 @@ pub struct UserOutput {
     pub uid: String,
     pub nickname: String,
     pub name: Option<String>,
-    pub gender: i8,
+    pub gender: Option<GenderType>,
     pub telephone: Option<String>,
     pub email: Option<String>,
     pub address: Option<String>,
-    pub r#type: i8,
+    pub r#type: ClassType,
     #[serde(serialize_with = "format_option_date_time")]
     pub last_login_dt: Option<DateTimeLocal>,
     #[serde(serialize_with = "format_date_time")]

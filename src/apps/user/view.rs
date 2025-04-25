@@ -65,11 +65,11 @@ pub async fn user_create(
         nickname: Set(input.nickname),
         password: Set(input.password),
         name: Set(input.name),
-        gender: Set(input.gender),
+        gender: Set(input.gender.map(|t| t as u8).unwrap_or(0)),
         telephone: Set(input.telephone),
         email: Set(input.email),
         address: Set(input.address),
-        r#type: Set(ClassType::User),
+        r#type: Set(ClassType::User as u8),
         ..Default::default()
     };
 
@@ -127,7 +127,7 @@ pub async fn user_patch(
 
     if data.gender.is_some() {
         // repr 可通过 as 直接转换
-        obj.gender = Set(data.gender)
+        obj.gender = Set(data.gender.map(|t| t as u8).unwrap_or(0));
     }
     if data.telephone.is_some() {
         obj.telephone = Set(data.telephone)

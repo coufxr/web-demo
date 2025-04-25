@@ -17,7 +17,7 @@ impl MigrationTrait for Migration {
                     .col(string(Account::Nickname).extra("COMMENT '昵称'"))
                     .col(string(Account::Password))
                     .col(string_null(Account::Name).extra("COMMENT '用户名'"))
-                    .col(tiny_unsigned(Account::Gender).extra("COMMENT '性别;1:男;2:女'"))
+                    .col(tiny_unsigned_null(Account::Gender).extra("COMMENT '性别;1:男;2:女'"))
                     .col(string_len_null(Account::Telephone, 20).extra("COMMENT '手机号码'"))
                     .col(string_null(Account::Email).extra("COMMENT '邮件地址'"))
                     .col(string_null(Account::Address).extra("COMMENT '居住地址'"))

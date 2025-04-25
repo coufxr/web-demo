@@ -16,7 +16,6 @@ mod entity;
 mod helper;
 mod project;
 
-
 #[tokio::main]
 async fn main() {
     let cfg = Configs::new();

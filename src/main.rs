@@ -12,7 +12,6 @@ use project::{configs::Configs, db, fallback, logger, middlewares::response::red
 
 mod apps;
 mod constants;
-mod entity;
 mod helper;
 mod project;
 
@@ -30,11 +29,7 @@ async fn main() {
 
     // 请求日志
     let trace = TraceLayer::new_for_http()
-        .make_span_with(
-            trace::DefaultMakeSpan::new()
-                .include_headers(true) // 包含请求头
-                .level(Level::INFO),
-        )
+        .on_request(trace::DefaultOnRequest::new().level(Level::INFO))
         .on_response(trace::DefaultOnResponse::new().level(Level::INFO)); // 请求结束时的行为
 
     // 中间件

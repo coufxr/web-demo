@@ -1,11 +1,10 @@
 use std::str::FromStr;
 
+use super::configs::Configs;
 use chrono::Local;
-use tracing::{subscriber, Level};
+use tracing::{Level, subscriber};
 use tracing_appender::{non_blocking, non_blocking::WorkerGuard, rolling};
 use tracing_subscriber::fmt::{format::Writer, time::FormatTime};
-
-use super::configs::Configs;
 
 struct LocalTimer;
 
@@ -32,6 +31,7 @@ pub async fn init(cfg: &Configs) -> WorkerGuard {
         .with_writer(non_blocking)
         .with_ansi(true) // 显示ansi的颜色输出
         .with_timer(LocalTimer) // 日期格式
+        .with_ansi(true)
         .with_file(false) // 显示源代码文件路径
         .with_line_number(true) // 显示源代码行号
         .with_thread_ids(true) // 显示记录事件的线程ID

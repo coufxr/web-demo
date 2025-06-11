@@ -1,20 +1,20 @@
 use std::sync::Arc;
 
+use super::schemas::{UserCreate, UserListInput, UserListOutput, UserOutput, UserPatch};
+use crate::apps::user::constants::ClassType;
+use crate::constants::AppState;
+use crate::project::error::{AppError, AppResult};
 use axum::{
-    extract::{Json, Path, Query},
     Extension,
+    extract::{Json, Path, Query},
 };
-use sea_orm::ActiveValue::Set;
-use sea_orm::*;
+use entity::prelude::Account;
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, Condition, EntityTrait, IntoActiveModel,
+    ModelTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
+};
 use uuid::Uuid;
 use validator::Validate;
-
-use crate::constants::AppState;
-use crate::entity::prelude::Account;
-use crate::project::error::{AppError, AppResult};
-
-use super::constants::ClassType;
-use super::schemas::{UserCreate, UserListInput, UserListOutput, UserOutput, UserPatch};
 
 // Extension 扩展引入需要与main中注册的元素一致
 pub async fn user_list(

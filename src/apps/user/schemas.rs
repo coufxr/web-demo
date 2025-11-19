@@ -1,5 +1,5 @@
-use sea_orm::prelude::DateTimeLocal;
 use sea_orm::FromQueryResult;
+use sea_orm::prelude::DateTimeLocal;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 

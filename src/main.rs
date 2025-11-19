@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use axum::{middleware, routing::get, Extension, Router};
+use axum::{Extension, Router, middleware, routing::get};
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
-use tower_http::trace::{self, TraceLayer};
-use tracing::{info, Level};
+use tower_http::trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer};
+use tracing::{Level, info};
 
 use constants::AppState;
 use migration::MigratorTrait;
@@ -29,8 +29,8 @@ async fn main() {
 
     // 请求日志
     let trace = TraceLayer::new_for_http()
-        .on_request(trace::DefaultOnRequest::new().level(Level::INFO))
-        .on_response(trace::DefaultOnResponse::new().level(Level::INFO)); // 请求结束时的行为
+        .on_request(DefaultOnRequest::new().level(Level::INFO))
+        .on_response(DefaultOnResponse::new().level(Level::INFO)); // 请求结束时的行为
 
     // 中间件
     let middleware_stack = ServiceBuilder::new()
@@ -48,7 +48,7 @@ async fn main() {
     let server_url = format!("{}:{}", &cfg.app.host, &cfg.app.port);
 
     let listener = tokio::net::TcpListener::bind(server_url).await.unwrap();
-    info!("listening on {}", listener.local_addr().unwrap());
+    info!("listening on http://{}", listener.local_addr().unwrap());
 
     axum::serve(listener, app).await.unwrap();
 }

@@ -8,11 +8,11 @@ use super::configs::Database as cfg_database;
 pub async fn init(db: &cfg_database) -> DbConn {
     let mut opt = ConnectOptions::new(db.url());
     // 设置连接池大小和其他选项
-    opt.min_connections(10)
-        .max_connections(5)
-        .connect_timeout(Duration::from_secs(5))
-        .idle_timeout(Duration::from_secs(5))
-        .max_lifetime(Duration::from_secs(5))
+    opt.min_connections(2) // 最少保持的连接数
+        .max_connections(10) //最多允许的连接数
+        .connect_timeout(Duration::from_secs(10)) //连接数据库的最大等待时间
+        .idle_timeout(Duration::from_secs(300)) // 连接空闲超时时间
+        .max_lifetime(Duration::from_secs(3600)) // 连接最大生命周期
         .sqlx_logging(db.debug);
 
     let conn = Database::connect(opt)

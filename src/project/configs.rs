@@ -48,6 +48,7 @@ impl Configs {
             .build()
             .unwrap_or_else(|e| panic!("配置文件加载失败：{}", e));
 
-        cfg.try_deserialize().unwrap()
+        cfg.try_deserialize()
+            .unwrap_or_else(|e1| panic!("配置文件转换失败: {}", e1))
     }
 }

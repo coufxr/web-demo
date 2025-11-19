@@ -3,7 +3,7 @@ mod view;
 pub mod constants;
 pub mod schemas;
 
-use axum::{routing::get, Router};
+use axum::{Router, routing::get};
 
 use view::{user_create, user_delete, user_detail, user_list, user_patch};
 

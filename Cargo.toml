@@ -17,33 +17,32 @@ sea-orm = { version = "1.1.10", features = [
     "debug-print",
 ] }
 
-serde = { version = "1.0.219", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 
 
 [dependencies]
 migration = { path = "migration" }
 entity = { path = "entity" }
-axum = "0.8.4"
+axum = "0.8.7"
 serde = { workspace = true }
-serde_json = "1.0.140"
+serde_json = "1.0.145"
 tokio = { version = "1.45.1", features = ["full"] }
 # 日志
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter", "json"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter", "json"] }
 tracing-appender = "0.2.3"
 tower = { version = "0.5.2", features = ["full"] }
 tower-http = { version = "0.6.6", features = ["trace", "compression-br"] }
 # orm
 sea-orm = { workspace = true }
 # 错误处理
-thiserror = "2.0.12"
+thiserror = "2.0.17"
 # 日期处理
-chrono = "0.4.41"
-uuid = { version = "1.17.0", features = ["v4"] }
+chrono = "0.4.42"
+uuid = { version = "1.18.1", features = ["v4"] }
 # 字段校验
 validator = { version = "0.20.0", features = ["derive"] }
 serde_repr = "0.1.20"
 # 环境配置
-config = "0.15.11"
+config = "0.15.19"
 http-body-util = "0.1.3"
-

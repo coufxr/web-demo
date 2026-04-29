@@ -115,11 +115,11 @@ pub async fn user_patch(
         .ok_or_else(|| AppError::Other("not found".into()))? // 这个闭包抛错能否修改
         .into_active_model();
 
-    if data.nickname.is_some() {
-        obj.nickname = Set(data.nickname.unwrap())
+    if let Some(nickname) = data.nickname {
+        obj.nickname = Set(nickname)
     }
-    if data.password.is_some() {
-        obj.password = Set(data.password.unwrap())
+    if let Some(password) = data.password {
+        obj.password = Set(password)
     }
     if data.name.is_some() {
         obj.name = Set(data.name)

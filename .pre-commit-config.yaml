@@ -16,35 +16,39 @@ repos:
       - id: cargo-fmt
         name: cargo fmt
         description: Format files with rustfmt.
-        entry: bash -c 'cargo fmt -- --check'
-        language: rust
+        entry: cargo
+        args: ["fmt"]
+        language: system
         files: \.rs$
-        args: [ ]
+        pass_filenames: false
       - id: typos
         name: typos
         description: check typo
-        entry: bash -c 'typos'
-        language: rust
+        entry: typos
+        language: system
         files: \.*$
         pass_filenames: false
       - id: cargo-check
         name: cargo check
         description: Check the package for errors.
-        entry: bash -c 'cargo check --all'
-        language: rust
+        entry: cargo
+        args: ["check", "--workspace"]
+        language: system
         files: \.rs$
         pass_filenames: false
       - id: cargo-clippy
         name: cargo clippy
         description: Lint rust sources
-        entry: bash -c 'cargo clippy --all-targets --all-features --workspace --tests --benches -- -D warnings'
-        language: rust
+        entry: cargo
+        args: ["clippy", "--all-targets", "--all-features", "--workspace", "--tests", "--benches", "--", "-D", "warnings"]
+        language: system
         files: \.rs$
         pass_filenames: false
       - id: cargo-test
         name: cargo test
         description: unit test for the project
-        entry: bash -c 'cargo nextest run --all-features --workspace --no-tests pass'
-        language: rust
+        entry: cargo
+        args: ["nextest", "run", "--all-features", "--workspace", "--no-tests", "pass"]
+        language: system
         files: \.rs$
         pass_filenames: false

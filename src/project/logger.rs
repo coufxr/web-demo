@@ -20,13 +20,21 @@ impl FormatTime for LocalTimer {
     }
 }
 
-pub async fn init(cfg: &Configs) -> WorkerGuard {
+/// 初始化日志系统
+/// - 开发环境：输出到 stdout，启用颜色和详细信息
+/// - 生产环境：写入文件，关闭颜色、线程ID、目标以减少日志量
+pub fn init(cfg: &Configs) -> WorkerGuard {
     // 设置日志等级
     let level = Level::from_str(&cfg.log.level).unwrap_or(Level::INFO);
 
-    // 生产环境 → 写入文件
+    // 创建日志目录（生产环境）
+    if cfg.app.is_prod() {
+        let _ = std::fs::create_dir_all(&cfg.log.path);
+    }
+
+    // 生产环境 → 写入文件（按天滚动）
     // 开发环境 → 输出到 stdout
-    let (writer, guard) = if cfg.app.env == "prod" {
+    let (writer, guard) = if cfg.app.is_prod() {
         // 使用tracing_appender，指定日志的输出目标位置
         // 参考: https://docs.rs/tracing-appender/latest/tracing_appender/index.html
         let file_appender = rolling::daily(&cfg.log.path, &cfg.log.filename);
@@ -35,23 +43,34 @@ pub async fn init(cfg: &Configs) -> WorkerGuard {
         non_blocking(std::io::stdout())
     };
 
-    // EnvFilter
-    let filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(level.as_str()));
+    // EnvFilter - 使用配置文件中的级别
+    let filter = EnvFilter::new(level.as_str());
 
     // fmt layer（官方推荐）
-    let fmt_layer = tracing_subscriber::fmt::layer()
+    let mut fmt_layer = tracing_subscriber::fmt::layer()
         .with_writer(writer)
-        .with_ansi(true) // 显示ansi的颜色输出
         .with_timer(LocalTimer) // 日期格式
         .with_file(false) // 显示源代码文件路径
         .with_line_number(true) // 显示源代码行号
-        .with_thread_ids(true) // 显示记录事件的线程ID
-        .with_target(true) // 显示事件的目标（模块路径）
-        .compact() // 使用更紧凑、缩写的日志格式
-        // .pretty() // 漂亮的多行日志,用于本地开发和调试
-        // .json() // json格式
+        .compact() // 紧凑、单行格式
+        // .pretty() // 漂亮、多行格式，适合本地开发调试
+        // .json() // JSON 格式，适合生产环境日志收集
         // .flatten_event(true) // 为json展平事件元数据
         ;
+
+    // 开发环境：启用颜色和详细信息
+    // 生产环境：关闭颜色（避免日志文件包含 ANSI 转义码）、线程ID、目标，减少日志量
+    if cfg.app.is_prod() {
+        fmt_layer = fmt_layer
+            .with_ansi(false) // 关闭颜色
+            .with_thread_ids(false) // 关闭线程ID
+            .with_target(false); // 关闭目标
+    } else {
+        fmt_layer = fmt_layer
+            .with_ansi(true)
+            .with_thread_ids(true)
+            .with_target(true);
+    }
 
     // registry + layer（官方示例风格）
     tracing_subscriber::registry()

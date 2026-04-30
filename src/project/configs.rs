@@ -8,6 +8,12 @@ pub struct App {
     pub env: String,
 }
 
+impl App {
+    pub fn is_prod(&self) -> bool {
+        self.env == "prod"
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Log {
     pub level: String,

@@ -15,6 +15,10 @@ pub async fn redirect_response(
     request: Request,
     next: Next,
 ) -> Result<impl IntoResponse, Response> {
+    if request.uri().path().starts_with("/docs") {
+        return Ok(next.run(request).await.into_response());
+    }
+
     let res = next.run(request).await;
     let (parts, body) = res.into_parts();
     let bytes = body
@@ -37,5 +41,7 @@ pub async fn redirect_response(
     };
 
     //返回 Response
-    Ok(Response::from_parts(parts, response.into_response()))
+    let mut res = response.into_response();
+    res.headers_mut().extend(parts.headers);
+    Ok(res)
 }

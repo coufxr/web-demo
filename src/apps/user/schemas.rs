@@ -1,12 +1,13 @@
 use sea_orm::FromQueryResult;
 use sea_orm::prelude::DateTimeLocal;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::apps::user::constants::{ClassType, GenderType};
 use crate::helper::tools::{format_date_time, format_option_date_time};
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct UserListInput {
     pub name: Option<String>,
     pub telephone: Option<String>,
@@ -17,7 +18,7 @@ pub struct UserListInput {
     pub page_size: Option<u64>,
 }
 
-#[derive(Clone, Serialize, Deserialize, FromQueryResult)]
+#[derive(Clone, Serialize, Deserialize, FromQueryResult, ToSchema)]
 pub struct UserListOutput {
     pub id: i32,
     pub nickname: String,
@@ -27,7 +28,7 @@ pub struct UserListOutput {
     pub telephone: Option<String>,
 }
 
-#[derive(Default, Clone, Serialize, Deserialize, FromQueryResult)]
+#[derive(Clone, Serialize, Deserialize, FromQueryResult)]
 pub struct UserOutput {
     pub id: i32,
     pub uid: String,
@@ -44,7 +45,7 @@ pub struct UserOutput {
     pub create_ts: DateTimeLocal,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct UserCreate {
     pub nickname: String,
     pub password: String,
@@ -55,7 +56,7 @@ pub struct UserCreate {
     pub address: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct UserPatch {
     pub nickname: Option<String>,
     pub password: Option<String>,

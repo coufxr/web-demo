@@ -1,5 +1,6 @@
 use sea_orm::{DeriveActiveEnum, EnumIter};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use utoipa::ToSchema;
 
 #[derive(
     EnumIter,
@@ -11,6 +12,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
     Serialize_repr,
     Deserialize_repr,
     Default,
+    ToSchema,
 )]
 #[sea_orm(rs_type = "u8", db_type = "Integer")]
 #[repr(u8)]
@@ -30,6 +32,7 @@ pub enum ClassType {
     Serialize_repr,
     Deserialize_repr,
     Default,
+    ToSchema,
 )]
 #[sea_orm(rs_type = "u8", db_type = "Integer")]
 #[repr(u8)]

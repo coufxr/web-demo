@@ -1,12 +1,16 @@
 use std::sync::Arc;
 
-use axum::{Extension, Router, middleware, routing::get};
+use axum::{Extension, middleware, routing::get};
 use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer};
 use tracing::{Level, info};
+use utoipa::OpenApi;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_scalar::{Scalar, Servable};
 
+use apps::user::api_doc::ApiDoc;
 use constants::AppState;
 use migration::MigratorTrait;
 use project::{configs::Configs, db, fallback, logger, middlewares::response::redirect_response};
@@ -50,15 +54,15 @@ async fn main() {
         .layer(Extension(state))
         .layer(middleware::from_fn(redirect_response));
 
-    // 构建路由：
-    // / - 根路径，返回 "Hello, World!"
-    // /api/v1/* - API v1 版本路由
-    // fallback - 404 处理
-    let app = Router::new()
+    let (app, mut openapi) = OpenApiRouter::new()
         .route("/", get(|| async { "Hello, World!" }))
         .nest("/api/v1", apps::v1_routes())
         .fallback(fallback)
-        .layer(middleware_stack);
+        .layer(middleware_stack)
+        .split_for_parts();
+
+    openapi.merge(ApiDoc::openapi());
+    let app = app.merge(Scalar::with_url("/docs", openapi));
 
     // 绑定监听地址
     let server_url = format!("{}:{}", &cfg.app.host, &cfg.app.port);

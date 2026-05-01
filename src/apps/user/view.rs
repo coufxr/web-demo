@@ -16,16 +16,23 @@ use sea_orm::{
 use uuid::Uuid;
 use validator::Validate;
 
-// Extension 扩展引入需要与main中注册的元素一致
+/// 获取用户列表
+#[utoipa::path(
+    get,
+    path = "",
+    tag = "用户管理",
+    responses(
+        (status = 200, body = Vec<UserListOutput>)
+    )
+)]
 pub async fn user_list(
     Extension(state): Extension<Arc<AppState>>,
-    Query(input): Query<UserListInput>, // 放在此处 axum 会直接返回,不会经过处理
+    Query(input): Query<UserListInput>,
 ) -> AppResult<Json<Vec<UserListOutput>>> {
-    // 在函数内部返回验证错误能够被 AppError 处理
     input.validate()?;
 
     let data = Account::Entity::find()
-        .select_only() // 指定加载哪些字段
+        .select_only()
         .columns([
             Account::Column::Id,
             Account::Column::Nickname,
@@ -35,7 +42,6 @@ pub async fn user_list(
             Account::Column::Telephone,
         ])
         .filter(
-            // 实现 字段存在及查询. 不存在则跳过
             Condition::all()
                 .add_option(input.r#type.map(|t| Account::Column::Type.eq(t)))
                 .add_option(input.name.map(|n| Account::Column::Name.contains(n)))
@@ -45,17 +51,27 @@ pub async fn user_list(
                         .map(|t| Account::Column::Telephone.contains(t)),
                 ),
         )
-        .order_by_desc(Account::Column::Id) //排序
-        .into_model::<UserListOutput>() //指定的字段需要在此处进行接收, 否则原本 model 会因为字段缺失而报错
-        // .all(&state.db) // 获取全部的数据
+        .order_by_desc(Account::Column::Id)
+        .into_model::<UserListOutput>()
         .paginate(&state.db, input.page_size.unwrap_or(10))
-        .fetch_page(input.page.unwrap_or(1) - 1) //page 页数从 `0` 开始算起
+        .fetch_page(input.page.unwrap_or(1) - 1)
         .await
         .map_err(AppError::from)?;
 
     Ok(Json(data))
 }
 
+/// 创建用户
+#[utoipa::path(
+    post,
+    path = "",
+    tag = "用户管理",
+    request_body = UserCreate,
+    responses(
+        (status = 200),
+        (status = 400, description = "Validation error")
+    )
+)]
 pub async fn user_create(
     Extension(state): Extension<Arc<AppState>>,
     Json(input): Json<UserCreate>,
@@ -73,18 +89,21 @@ pub async fn user_create(
         ..Default::default()
     };
 
-    // 获取到整个新增模型属性 todo: 但不知如何将此模型返回给接口
     let _obj: Account::Model = obj.insert(&state.db).await.map_err(AppError::from)?;
-
-    // 可以获取到自增id
-    // let a = Account::Entity::insert(obj)
-    //     .exec(&state.db)
-    //     .await
-    //     .map_err(AppError::from)?;
 
     Ok(Json(()))
 }
 
+/// 获取用户详情
+#[utoipa::path(
+    get,
+    path = "/{id}",
+    tag = "用户管理",
+    responses(
+        (status = 200),
+        (status = 404, description = "User not found")
+    )
+)]
 pub async fn user_detail(
     Extension(state): Extension<Arc<AppState>>,
     Path(id): Path<u32>,
@@ -94,7 +113,6 @@ pub async fn user_detail(
         .one(&state.db)
         .await
         .map_err(AppError::from)?;
-    // .unwrap_or_default(); // 可直接使用model的默认值
 
     if qs.is_none() {
         return Err(AppError::Other("未找到对应数据".to_string()));
@@ -103,6 +121,17 @@ pub async fn user_detail(
     Ok(Json(qs.unwrap()))
 }
 
+/// 更新用户
+#[utoipa::path(
+    patch,
+    path = "/{id}",
+    tag = "用户管理",
+    request_body = UserPatch,
+    responses(
+        (status = 200),
+        (status = 404, description = "User not found")
+    )
+)]
 pub async fn user_patch(
     Extension(state): Extension<Arc<AppState>>,
     Path(id): Path<u32>,
@@ -112,7 +141,7 @@ pub async fn user_patch(
         .one(&state.db)
         .await
         .map_err(AppError::from)?
-        .ok_or_else(|| AppError::Other("not found".into()))? // 这个闭包抛错能否修改
+        .ok_or_else(|| AppError::Other("not found".into()))?
         .into_active_model();
 
     if let Some(nickname) = data.nickname {
@@ -124,9 +153,7 @@ pub async fn user_patch(
     if data.name.is_some() {
         obj.name = Set(data.name)
     }
-
     if data.gender.is_some() {
-        // repr 可通过 as 直接转换
         obj.gender = Set(data.gender.map(|t| t as u8).unwrap_or(0));
     }
     if data.telephone.is_some() {
@@ -144,6 +171,16 @@ pub async fn user_patch(
     Ok(Json(()))
 }
 
+/// 删除用户
+#[utoipa::path(
+    delete,
+    path = "/{id}",
+    tag = "用户管理",
+    responses(
+        (status = 200),
+        (status = 404, description = "User not found")
+    )
+)]
 pub async fn user_delete(
     Extension(state): Extension<Arc<AppState>>,
     Path(id): Path<u32>,

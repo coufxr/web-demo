@@ -1,17 +1,17 @@
 [app]
-HOST=
-PORT=
-ENV=
+host=
+port=
+env=
 
 [log]
-LEVEL=
-PATH=
-FILENAME=
+level=
+path=
+filename=
 
 [database]
-DEBUG=
-HOST=
-PORT=
-USERNAME=
-PASSWORD=
-DBNAME=
+debug=
+host=
+port=
+username=
+password=
+dbname=

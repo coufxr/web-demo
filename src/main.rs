@@ -2,7 +2,7 @@ use axum::{Extension, middleware, routing::get};
 use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
-use tower_http::trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer};
+use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{Level, info};
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
@@ -34,7 +34,7 @@ async fn main() {
 
     // 请求日志中间件：记录每个请求和响应
     let trace = TraceLayer::new_for_http()
-        .on_request(DefaultOnRequest::new().level(Level::INFO))
+        .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
         .on_response(DefaultOnResponse::new().level(Level::INFO));
 
     // 中间件堆栈（自下而上执行）：

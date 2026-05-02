@@ -6,6 +6,7 @@ pub mod db;
 pub mod error;
 pub mod logger;
 pub mod middlewares;
+pub mod pagination;
 pub mod response;
 
 pub async fn fallback() -> Response {

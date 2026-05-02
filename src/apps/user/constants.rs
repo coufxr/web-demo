@@ -1,7 +1,8 @@
 use sea_orm::{DeriveActiveEnum, EnumIter};
-use serde_repr::{Deserialize_repr, Serialize_repr};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+/// 用户类型: 1-普通用户, 2-内部员工
 #[derive(
     EnumIter,
     DeriveActiveEnum,
@@ -9,8 +10,8 @@ use utoipa::ToSchema;
     Debug,
     PartialEq,
     Eq,
-    Serialize_repr,
-    Deserialize_repr,
+    Serialize,
+    Deserialize,
     Default,
     ToSchema,
 )]
@@ -18,10 +19,13 @@ use utoipa::ToSchema;
 #[repr(u8)]
 pub enum ClassType {
     #[default]
+    #[serde(rename = "1")]
     User = 1,
+    #[serde(rename = "2")]
     InternalStaff = 2,
 }
 
+/// 性别: 1-男, 2-女
 #[derive(
     EnumIter,
     DeriveActiveEnum,
@@ -29,8 +33,8 @@ pub enum ClassType {
     Debug,
     PartialEq,
     Eq,
-    Serialize_repr,
-    Deserialize_repr,
+    Serialize,
+    Deserialize,
     Default,
     ToSchema,
 )]
@@ -38,6 +42,8 @@ pub enum ClassType {
 #[repr(u8)]
 pub enum GenderType {
     #[default]
+    #[serde(rename = "1")]
     Male = 1,
+    #[serde(rename = "2")]
     Female = 2,
 }

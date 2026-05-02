@@ -1,6 +1,7 @@
 use super::schemas::{UserCreate, UserListInput, UserListOutput, UserOutput, UserPatch};
 use crate::apps::user::constants::ClassType;
 use crate::project::error::{ApiResult, AppError, ok};
+use crate::project::pagination::{PagePagination, PaginationInput};
 use axum::http::StatusCode;
 use axum::{
     Extension,
@@ -20,17 +21,22 @@ use validator::Validate;
     get,
     path = "",
     tag = "用户管理",
+    params(UserListInput,PaginationInput),
     responses(
-        (status = 200, body = Vec<UserListOutput>)
+        (status = 200, body = PagePagination<UserListOutput>)
     )
 )]
 pub async fn user_list(
     Extension(db): Extension<DbConn>,
     Query(input): Query<UserListInput>,
-) -> ApiResult<Vec<UserListOutput>> {
+    Query(pagination): Query<PaginationInput>,
+) -> ApiResult<PagePagination<UserListOutput>> {
     input.validate()?;
 
-    let data = Account::Entity::find()
+    let page = pagination.page;
+    let page_size = pagination.page_size;
+
+    let query = Account::Entity::find()
         .select_only()
         .columns([
             Account::Column::Id,
@@ -49,14 +55,22 @@ pub async fn user_list(
                         .telephone
                         .map(|t| Account::Column::Telephone.contains(t)),
                 ),
-        )
+        );
+
+    let total = query.clone().count(&db).await?;
+    let data = query
         .order_by_desc(Account::Column::Id)
         .into_model::<UserListOutput>()
-        .paginate(&db, input.page_size.unwrap_or(10))
-        .fetch_page(input.page.unwrap_or(1) - 1)
+        .paginate(&db, page_size)
+        .fetch_page(page - 1)
         .await?;
 
-    ok(data)
+    ok(PagePagination {
+        data,
+        total,
+        page,
+        page_size,
+    })
 }
 
 /// 创建用户

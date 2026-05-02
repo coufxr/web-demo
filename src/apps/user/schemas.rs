@@ -1,21 +1,18 @@
 use sea_orm::FromQueryResult;
 use sea_orm::prelude::DateTimeLocal;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::apps::user::constants::{ClassType, GenderType};
 use crate::helper::tools::{format_date_time, format_option_date_time};
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct UserListInput {
     pub name: Option<String>,
     pub telephone: Option<String>,
     pub r#type: Option<ClassType>,
-    #[validate(range(min = 1))]
-    pub page: Option<u64>,
-    #[validate(range(min = 5, max = 100))]
-    pub page_size: Option<u64>,
 }
 
 #[derive(Clone, Serialize, Deserialize, FromQueryResult, ToSchema)]

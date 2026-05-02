@@ -1,3 +1,4 @@
+use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use sea_orm::DbErr;
@@ -30,4 +31,9 @@ impl IntoResponse for AppError {
     }
 }
 
-pub type AppResult<T> = Result<T, AppError>;
+pub type ApiResult<T> = Result<Json<T>, AppError>;
+
+/// 成功响应的辅助函数
+pub fn ok<T>(data: T) -> ApiResult<T> {
+    Ok(Json(data))
+}

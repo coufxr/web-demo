@@ -1,6 +1,6 @@
 use super::schemas::{UserCreate, UserListInput, UserListOutput, UserOutput, UserPatch};
 use crate::apps::user::constants::ClassType;
-use crate::project::error::{AppError, AppResult};
+use crate::project::error::{ApiResult, AppError, ok};
 use axum::http::StatusCode;
 use axum::{
     Extension,
@@ -27,7 +27,7 @@ use validator::Validate;
 pub async fn user_list(
     Extension(db): Extension<DbConn>,
     Query(input): Query<UserListInput>,
-) -> AppResult<Json<Vec<UserListOutput>>> {
+) -> ApiResult<Vec<UserListOutput>> {
     input.validate()?;
 
     let data = Account::Entity::find()
@@ -56,7 +56,7 @@ pub async fn user_list(
         .fetch_page(input.page.unwrap_or(1) - 1)
         .await?;
 
-    Ok(Json(data))
+    ok(data)
 }
 
 /// 创建用户
@@ -73,7 +73,7 @@ pub async fn user_list(
 pub async fn user_create(
     Extension(db): Extension<DbConn>,
     Json(input): Json<UserCreate>,
-) -> AppResult<Json<()>> {
+) -> ApiResult<()> {
     let obj = Account::ActiveModel {
         uid: Set(Uuid::new_v4().to_string()),
         nickname: Set(input.nickname),
@@ -89,7 +89,7 @@ pub async fn user_create(
 
     let _obj: Account::Model = obj.insert(&db).await?;
 
-    Ok(Json(()))
+    ok(())
 }
 
 /// 获取用户详情
@@ -105,13 +105,13 @@ pub async fn user_create(
 pub async fn user_detail(
     Extension(db): Extension<DbConn>,
     Path(id): Path<u32>,
-) -> AppResult<Json<UserOutput>> {
+) -> ApiResult<UserOutput> {
     let user = Account::Entity::find_by_id(id as i32)
         .into_model::<UserOutput>()
         .one(&db)
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?;
-    Ok(Json(user))
+    ok(user)
 }
 
 /// 更新用户
@@ -129,7 +129,7 @@ pub async fn user_patch(
     Extension(db): Extension<DbConn>,
     Path(id): Path<u32>,
     Json(data): Json<UserPatch>,
-) -> AppResult<Json<()>> {
+) -> ApiResult<()> {
     let mut obj = Account::Entity::find_by_id(id as i32)
         .one(&db)
         .await?
@@ -160,7 +160,7 @@ pub async fn user_patch(
 
     let _obj = obj.update(&db).await?;
 
-    Ok(Json(()))
+    ok(())
 }
 
 /// 删除用户
@@ -173,15 +173,12 @@ pub async fn user_patch(
         (status = 404, description = "User not found")
     )
 )]
-pub async fn user_delete(
-    Extension(db): Extension<DbConn>,
-    Path(id): Path<u32>,
-) -> AppResult<Json<()>> {
+pub async fn user_delete(Extension(db): Extension<DbConn>, Path(id): Path<u32>) -> ApiResult<()> {
     let obj = Account::Entity::find_by_id(id as i32)
         .one(&db)
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?;
     obj.delete(&db).await?;
 
-    Ok(Json(()))
+    ok(())
 }

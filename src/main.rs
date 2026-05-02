@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::{Extension, middleware, routing::get};
 use tokio::signal;
 use tower::ServiceBuilder;
@@ -11,12 +9,10 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
 
 use apps::user::api_doc::ApiDoc;
-use constants::AppState;
 use migration::MigratorTrait;
 use project::{configs::Configs, db, fallback, logger, middlewares::response::redirect_response};
 
 mod apps;
-mod constants;
 mod helper;
 mod project;
 
@@ -30,11 +26,9 @@ async fn main() {
 
     // 初始化数据库连接
     let db = db::init(&cfg.database).await.expect("数据库连接失败");
-    // 将数据库连接放入共享状态，供处理器使用
-    let state = Arc::new(AppState { db });
 
     // 运行数据库迁移，确保表结构是最新的
-    migration::Migrator::up(&state.db, None)
+    migration::Migrator::up(&db, None)
         .await
         .expect("数据库生成失败");
 
@@ -46,12 +40,12 @@ async fn main() {
     // 中间件堆栈（自下而上执行）：
     // 1. trace - 请求日志
     // 2. CompressionLayer - 响应压缩
-    // 3. Extension(state) - 注入共享状态
+    // 3. Extension(db) - 注入数据库连接
     // 4. redirect_response - 自定义响应处理
     let middleware_stack = ServiceBuilder::new()
         .layer(trace)
         .layer(CompressionLayer::new())
-        .layer(Extension(state))
+        .layer(Extension(db.clone()))
         .layer(middleware::from_fn(redirect_response));
 
     let (app, mut openapi) = OpenApiRouter::new()

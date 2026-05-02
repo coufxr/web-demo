@@ -1,14 +1,12 @@
-use std::sync::Arc;
-
 use super::schemas::{UserCreate, UserListInput, UserListOutput, UserOutput, UserPatch};
 use crate::apps::user::constants::ClassType;
-use crate::constants::AppState;
 use crate::project::error::{AppError, AppResult};
 use axum::{
     Extension,
     extract::{Json, Path, Query},
 };
 use entity::prelude::Account;
+use sea_orm::DbConn;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, Condition, EntityTrait, IntoActiveModel,
     ModelTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
@@ -26,7 +24,7 @@ use validator::Validate;
     )
 )]
 pub async fn user_list(
-    Extension(state): Extension<Arc<AppState>>,
+    Extension(db): Extension<DbConn>,
     Query(input): Query<UserListInput>,
 ) -> AppResult<Json<Vec<UserListOutput>>> {
     input.validate()?;
@@ -53,7 +51,7 @@ pub async fn user_list(
         )
         .order_by_desc(Account::Column::Id)
         .into_model::<UserListOutput>()
-        .paginate(&state.db, input.page_size.unwrap_or(10))
+        .paginate(&db, input.page_size.unwrap_or(10))
         .fetch_page(input.page.unwrap_or(1) - 1)
         .await
         .map_err(AppError::from)?;
@@ -73,7 +71,7 @@ pub async fn user_list(
     )
 )]
 pub async fn user_create(
-    Extension(state): Extension<Arc<AppState>>,
+    Extension(db): Extension<DbConn>,
     Json(input): Json<UserCreate>,
 ) -> AppResult<Json<()>> {
     let obj = Account::ActiveModel {
@@ -89,7 +87,7 @@ pub async fn user_create(
         ..Default::default()
     };
 
-    let _obj: Account::Model = obj.insert(&state.db).await.map_err(AppError::from)?;
+    let _obj: Account::Model = obj.insert(&db).await.map_err(AppError::from)?;
 
     Ok(Json(()))
 }
@@ -105,12 +103,12 @@ pub async fn user_create(
     )
 )]
 pub async fn user_detail(
-    Extension(state): Extension<Arc<AppState>>,
+    Extension(db): Extension<DbConn>,
     Path(id): Path<u32>,
 ) -> AppResult<Json<UserOutput>> {
     let qs = Account::Entity::find_by_id(id as i32)
         .into_model::<UserOutput>()
-        .one(&state.db)
+        .one(&db)
         .await
         .map_err(AppError::from)?;
 
@@ -133,12 +131,12 @@ pub async fn user_detail(
     )
 )]
 pub async fn user_patch(
-    Extension(state): Extension<Arc<AppState>>,
+    Extension(db): Extension<DbConn>,
     Path(id): Path<u32>,
     Json(data): Json<UserPatch>,
 ) -> AppResult<Json<()>> {
     let mut obj = Account::Entity::find_by_id(id as i32)
-        .one(&state.db)
+        .one(&db)
         .await
         .map_err(AppError::from)?
         .ok_or_else(|| AppError::Other("not found".into()))?
@@ -166,7 +164,7 @@ pub async fn user_patch(
         obj.address = Set(data.address)
     }
 
-    let _obj = obj.update(&state.db).await.map_err(AppError::from)?;
+    let _obj = obj.update(&db).await.map_err(AppError::from)?;
 
     Ok(Json(()))
 }
@@ -182,18 +180,16 @@ pub async fn user_patch(
     )
 )]
 pub async fn user_delete(
-    Extension(state): Extension<Arc<AppState>>,
+    Extension(db): Extension<DbConn>,
     Path(id): Path<u32>,
 ) -> AppResult<Json<()>> {
     let obj = Account::Entity::find_by_id(id as i32)
-        .one(&state.db)
+        .one(&db)
         .await
-        .map_err(AppError::from)?;
+        .map_err(AppError::from)?
+        .ok_or_else(|| AppError::Other("not found".into()))?;
 
-    let obj = obj.unwrap();
-
-    let res = obj.delete(&state.db).await.map_err(AppError::from)?;
-    assert_eq!(res.rows_affected, 1);
+    obj.delete(&db).await.map_err(AppError::from)?;
 
     Ok(Json(()))
 }

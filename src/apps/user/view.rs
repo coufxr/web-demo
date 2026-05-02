@@ -1,6 +1,7 @@
 use super::schemas::{UserCreate, UserListInput, UserListOutput, UserOutput, UserPatch};
 use crate::apps::user::constants::ClassType;
 use crate::project::error::{AppError, AppResult};
+use axum::http::StatusCode;
 use axum::{
     Extension,
     extract::{Json, Path, Query},
@@ -53,8 +54,7 @@ pub async fn user_list(
         .into_model::<UserListOutput>()
         .paginate(&db, input.page_size.unwrap_or(10))
         .fetch_page(input.page.unwrap_or(1) - 1)
-        .await
-        .map_err(AppError::from)?;
+        .await?;
 
     Ok(Json(data))
 }
@@ -87,7 +87,7 @@ pub async fn user_create(
         ..Default::default()
     };
 
-    let _obj: Account::Model = obj.insert(&db).await.map_err(AppError::from)?;
+    let _obj: Account::Model = obj.insert(&db).await?;
 
     Ok(Json(()))
 }
@@ -106,17 +106,12 @@ pub async fn user_detail(
     Extension(db): Extension<DbConn>,
     Path(id): Path<u32>,
 ) -> AppResult<Json<UserOutput>> {
-    let qs = Account::Entity::find_by_id(id as i32)
+    let user = Account::Entity::find_by_id(id as i32)
         .into_model::<UserOutput>()
         .one(&db)
-        .await
-        .map_err(AppError::from)?;
-
-    if qs.is_none() {
-        return Err(AppError::Other("未找到对应数据".to_string()));
-    }
-
-    Ok(Json(qs.unwrap()))
+        .await?
+        .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?;
+    Ok(Json(user))
 }
 
 /// 更新用户
@@ -137,9 +132,8 @@ pub async fn user_patch(
 ) -> AppResult<Json<()>> {
     let mut obj = Account::Entity::find_by_id(id as i32)
         .one(&db)
-        .await
-        .map_err(AppError::from)?
-        .ok_or_else(|| AppError::Other("not found".into()))?
+        .await?
+        .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?
         .into_active_model();
 
     if let Some(nickname) = data.nickname {
@@ -164,7 +158,7 @@ pub async fn user_patch(
         obj.address = Set(data.address)
     }
 
-    let _obj = obj.update(&db).await.map_err(AppError::from)?;
+    let _obj = obj.update(&db).await?;
 
     Ok(Json(()))
 }
@@ -185,11 +179,9 @@ pub async fn user_delete(
 ) -> AppResult<Json<()>> {
     let obj = Account::Entity::find_by_id(id as i32)
         .one(&db)
-        .await
-        .map_err(AppError::from)?
-        .ok_or_else(|| AppError::Other("not found".into()))?;
-
-    obj.delete(&db).await.map_err(AppError::from)?;
+        .await?
+        .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?;
+    obj.delete(&db).await?;
 
     Ok(Json(()))
 }

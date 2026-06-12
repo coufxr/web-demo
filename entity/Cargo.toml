@@ -9,6 +9,24 @@ publish = false
 name = "entity"
 path = "src/lib.rs"
 
+# ──────────────────────────────────────────────
+# 生产依赖
+# ──────────────────────────────────────────────
 [dependencies]
+# ORM（workspace 共享，features 由 workspace.dependencies 定义）
 sea-orm = { workspace = true }
+# 序列化 / 反序列化
 serde = { workspace = true }
+# 日期时间
+chrono = { workspace = true }
+# 自定义 derive 宏（soft_delete 等）
+macros = { path = "../macros" }
+
+# ──────────────────────────────────────────────
+# 开发 / 测试依赖
+# ──────────────────────────────────────────────
+[dev-dependencies]
+# mock 数据库连接（仅测试使用）
+sea-orm = { workspace = true, features = ["mock"] }
+# 异步阻塞执行器（测试中用 futures::executor::block_on 驱动 async）
+futures = "0.3"

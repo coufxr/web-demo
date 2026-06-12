@@ -10,7 +10,6 @@ use utoipa_scalar::{Scalar, Servable};
 
 use apps::user::api_doc::ApiDoc;
 use constants::AppState;
-use migration::MigratorTrait;
 use project::{configs::Configs, db, fallback, logger, middlewares::response::redirect_response};
 
 mod apps;
@@ -29,10 +28,11 @@ async fn main() {
     // 初始化数据库连接
     let db = db::init(&cfg.database).await.expect("数据库连接失败");
 
-    // 运行数据库迁移，确保表结构是最新的
-    migration::Migrator::up(&db, None)
+    // 自动同步 Entity 定义到数据库表结构
+    db.get_schema_registry("entity::*")
+        .sync(&db)
         .await
-        .expect("数据库生成失败");
+        .expect("数据库同步失败");
 
     // 请求日志中间件：记录每个请求和响应
     let trace = TraceLayer::new_for_http()

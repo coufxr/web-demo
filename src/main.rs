@@ -1,4 +1,4 @@
-use axum::{Extension, middleware, routing::get};
+use axum::{middleware, routing::get};
 use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
@@ -9,6 +9,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
 
 use apps::user::api_doc::ApiDoc;
+use constants::AppState;
 use migration::MigratorTrait;
 use project::{configs::Configs, db, fallback, logger, middlewares::response::redirect_response};
 
@@ -38,15 +39,16 @@ async fn main() {
         .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
         .on_response(DefaultOnResponse::new().level(Level::INFO));
 
+    // 应用状态，通过 State 注入到 handler
+    let app_state = AppState { db };
+
     // 中间件堆栈（自下而上执行）：
     // 1. trace - 请求日志
     // 2. CompressionLayer - 响应压缩
-    // 3. Extension(db) - 注入数据库连接
-    // 4. redirect_response - 自定义响应处理
+    // 3. redirect_response - 自定义响应处理
     let middleware_stack = ServiceBuilder::new()
         .layer(trace)
         .layer(CompressionLayer::new())
-        .layer(Extension(db.clone()))
         .layer(middleware::from_fn(redirect_response));
 
     let (app, mut openapi) = OpenApiRouter::new()
@@ -54,6 +56,7 @@ async fn main() {
         .nest("/api/v1", apps::v1_routes())
         .fallback(fallback)
         .layer(middleware_stack)
+        .with_state(app_state)
         .split_for_parts();
 
     openapi.merge(ApiDoc::openapi());

@@ -1,15 +1,13 @@
 use super::schemas::{UserCreate, UserListInput, UserListOutput, UserOutput, UserPatch};
 use crate::apps::user::constants::ClassType;
+use crate::constants::AppState;
 use crate::project::error::{ApiResult, AppError, ok};
 use crate::project::extractor::ResourceId;
 use crate::project::pagination::{PagePagination, PaginationInput};
+use axum::extract::State;
+use axum::extract::{Json, Query};
 use axum::http::StatusCode;
-use axum::{
-    Extension,
-    extract::{Json, Query},
-};
 use entity::prelude::Account;
-use sea_orm::DbConn;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, Condition, EntityTrait, IntoActiveModel,
     ModelTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
@@ -28,7 +26,7 @@ use validator::Validate;
     )
 )]
 pub async fn user_list(
-    Extension(db): Extension<DbConn>,
+    State(state): State<AppState>,
     Query(input): Query<UserListInput>,
     Query(pagination): Query<PaginationInput>,
 ) -> ApiResult<PagePagination<UserListOutput>> {
@@ -58,11 +56,11 @@ pub async fn user_list(
                 ),
         );
 
-    let total = query.clone().count(&db).await?;
+    let total = query.clone().count(&state.db).await?;
     let data = query
         .order_by_desc(Account::Column::Id)
         .into_model::<UserListOutput>()
-        .paginate(&db, page_size)
+        .paginate(&state.db, page_size)
         .fetch_page(page - 1)
         .await?;
 
@@ -86,7 +84,7 @@ pub async fn user_list(
     )
 )]
 pub async fn user_create(
-    Extension(db): Extension<DbConn>,
+    State(state): State<AppState>,
     Json(input): Json<UserCreate>,
 ) -> ApiResult<()> {
     input.validate()?;
@@ -103,7 +101,7 @@ pub async fn user_create(
         ..Default::default()
     };
 
-    let _obj: Account::Model = obj.insert(&db).await?;
+    let _obj: Account::Model = obj.insert(&state.db).await?;
 
     ok(())
 }
@@ -119,12 +117,12 @@ pub async fn user_create(
     )
 )]
 pub async fn user_detail(
-    Extension(db): Extension<DbConn>,
+    State(state): State<AppState>,
     ResourceId(id): ResourceId,
 ) -> ApiResult<UserOutput> {
     let user = Account::Entity::find_by_id(id)
         .into_model::<UserOutput>()
-        .one(&db)
+        .one(&state.db)
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?;
     ok(user)
@@ -142,12 +140,12 @@ pub async fn user_detail(
     )
 )]
 pub async fn user_patch(
-    Extension(db): Extension<DbConn>,
+    State(state): State<AppState>,
     ResourceId(id): ResourceId,
     Json(data): Json<UserPatch>,
 ) -> ApiResult<()> {
     let mut obj = Account::Entity::find_by_id(id)
-        .one(&db)
+        .one(&state.db)
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?
         .into_active_model();
@@ -176,7 +174,7 @@ pub async fn user_patch(
         obj.address = Set(data.address)
     }
 
-    let _obj = obj.update(&db).await?;
+    let _obj = obj.update(&state.db).await?;
 
     ok(())
 }
@@ -192,14 +190,14 @@ pub async fn user_patch(
     )
 )]
 pub async fn user_delete(
-    Extension(db): Extension<DbConn>,
+    State(state): State<AppState>,
     ResourceId(id): ResourceId,
 ) -> ApiResult<()> {
     let obj = Account::Entity::find_by_id(id)
-        .one(&db)
+        .one(&state.db)
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?;
-    obj.delete(&db).await?;
+    obj.delete(&state.db).await?;
 
     ok(())
 }

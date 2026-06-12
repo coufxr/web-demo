@@ -8,7 +8,6 @@ use crate::apps::user::constants::{ClassType, GenderType};
 use crate::helper::tools::{format_date_time, format_option_date_time};
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
-#[into_params(parameter_in = Query)]
 pub struct UserListInput {
     pub name: Option<String>,
     pub telephone: Option<String>,

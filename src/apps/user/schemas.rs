@@ -42,9 +42,11 @@ pub struct UserOutput {
     pub create_ts: DateTimeLocal,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Validate)]
 pub struct UserCreate {
+    #[validate(length(min = 1, message = "昵称不能为空"))]
     pub nickname: String,
+    #[validate(length(min = 6, message = "密码长度不能少于6位"))]
     pub password: String,
     pub name: Option<String>,
     pub gender: Option<GenderType>,

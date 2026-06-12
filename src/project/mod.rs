@@ -4,6 +4,7 @@ use axum::response::{IntoResponse, Response};
 pub mod configs;
 pub mod db;
 pub mod error;
+pub mod extractor;
 pub mod logger;
 pub mod middlewares;
 pub mod pagination;

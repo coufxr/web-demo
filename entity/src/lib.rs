@@ -3,5 +3,3 @@
 pub mod prelude;
 
 pub mod account;
-pub mod chat_message_history;
-pub mod chat_session;

@@ -18,16 +18,28 @@ pub enum AppError {
     Api(StatusCode, String),
 }
 
-// 实现 IntoResponse trait，以便能够将 MyError 直接转换为响应
+// 实现 IntoResponse trait，将 AppError 转换为统一 JSON 格式响应
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            AppError::DB(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            AppError::DB(e) => {
+                // 数据库错误不暴露内部细节，仅记录日志
+                error!("数据库错误: {}", e);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "服务器内部错误".to_string(),
+                )
+            }
             AppError::Validation(e) => (StatusCode::BAD_REQUEST, json!(e).to_string()),
             AppError::Api(status, msg) => (status, msg),
         };
         error!("err info: {}", error_message);
-        (status, error_message).into_response()
+        let body = Json(json!({
+            "code": status.as_u16(),
+            "message": error_message,
+            "data": null
+        }));
+        (status, body).into_response()
     }
 }
 

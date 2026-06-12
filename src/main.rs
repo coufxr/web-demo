@@ -13,6 +13,7 @@ use migration::MigratorTrait;
 use project::{configs::Configs, db, fallback, logger, middlewares::response::redirect_response};
 
 mod apps;
+mod constants;
 mod helper;
 mod project;
 

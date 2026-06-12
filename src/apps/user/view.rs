@@ -1,11 +1,12 @@
 use super::schemas::{UserCreate, UserListInput, UserListOutput, UserOutput, UserPatch};
 use crate::apps::user::constants::ClassType;
 use crate::project::error::{ApiResult, AppError, ok};
+use crate::project::extractor::ResourceId;
 use crate::project::pagination::{PagePagination, PaginationInput};
 use axum::http::StatusCode;
 use axum::{
     Extension,
-    extract::{Json, Path, Query},
+    extract::{Json, Query},
 };
 use entity::prelude::Account;
 use sea_orm::DbConn;
@@ -88,6 +89,7 @@ pub async fn user_create(
     Extension(db): Extension<DbConn>,
     Json(input): Json<UserCreate>,
 ) -> ApiResult<()> {
+    input.validate()?;
     let obj = Account::ActiveModel {
         uid: Set(Uuid::new_v4().to_string()),
         nickname: Set(input.nickname),
@@ -118,9 +120,9 @@ pub async fn user_create(
 )]
 pub async fn user_detail(
     Extension(db): Extension<DbConn>,
-    Path(id): Path<u32>,
+    ResourceId(id): ResourceId,
 ) -> ApiResult<UserOutput> {
-    let user = Account::Entity::find_by_id(id as i32)
+    let user = Account::Entity::find_by_id(id)
         .into_model::<UserOutput>()
         .one(&db)
         .await?
@@ -141,26 +143,28 @@ pub async fn user_detail(
 )]
 pub async fn user_patch(
     Extension(db): Extension<DbConn>,
-    Path(id): Path<u32>,
+    ResourceId(id): ResourceId,
     Json(data): Json<UserPatch>,
 ) -> ApiResult<()> {
-    let mut obj = Account::Entity::find_by_id(id as i32)
+    let mut obj = Account::Entity::find_by_id(id)
         .one(&db)
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?
         .into_active_model();
 
-    if let Some(nickname) = data.nickname {
-        obj.nickname = Set(nickname)
+    // 非空字段需要解包 Option
+    if let Some(v) = data.nickname {
+        obj.nickname = Set(v)
     }
-    if let Some(password) = data.password {
-        obj.password = Set(password)
+    if let Some(v) = data.password {
+        obj.password = Set(v)
     }
+    if let Some(v) = data.gender {
+        obj.gender = Set(v as u8)
+    }
+    // 可空字段直接传 Option
     if data.name.is_some() {
         obj.name = Set(data.name)
-    }
-    if data.gender.is_some() {
-        obj.gender = Set(data.gender.map(|t| t as u8).unwrap_or(0));
     }
     if data.telephone.is_some() {
         obj.telephone = Set(data.telephone)
@@ -187,8 +191,11 @@ pub async fn user_patch(
         (status = 404, description = "User not found")
     )
 )]
-pub async fn user_delete(Extension(db): Extension<DbConn>, Path(id): Path<u32>) -> ApiResult<()> {
-    let obj = Account::Entity::find_by_id(id as i32)
+pub async fn user_delete(
+    Extension(db): Extension<DbConn>,
+    ResourceId(id): ResourceId,
+) -> ApiResult<()> {
+    let obj = Account::Entity::find_by_id(id)
         .one(&db)
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?;

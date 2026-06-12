@@ -2,14 +2,14 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, IntoParams, Validate, Default)]
-#[into_params(parameter_in = Query)]
 pub struct PaginationInput {
     #[serde(default = "default_page")]
+    #[param(default = 1, example = 1)]
     #[validate(range(min = 1))]
     pub page: u64,
     #[serde(default = "default_page_size")]
+    #[param(default = 10, example = 10)]
     #[validate(range(min = 5, max = 100))]
     pub page_size: u64,
 }

@@ -93,11 +93,11 @@ pub async fn user_create(
         nickname: Set(input.nickname),
         password: Set(input.password),
         name: Set(input.name),
-        gender: Set(input.gender.map(|t| t as u8).unwrap_or(0)),
+        gender: Set(input.gender.map(|t| t as i16).unwrap_or(0)),
         telephone: Set(input.telephone),
         email: Set(input.email),
         address: Set(input.address),
-        r#type: Set(ClassType::User as u8),
+        r#type: Set(ClassType::User as i16),
         ..Default::default()
     };
 
@@ -158,7 +158,7 @@ pub async fn user_patch(
         obj.password = Set(v)
     }
     if let Some(v) = data.gender {
-        obj.gender = Set(v as u8)
+        obj.gender = Set(v as i16)
     }
     // 可空字段直接传 Option
     if data.name.is_some() {

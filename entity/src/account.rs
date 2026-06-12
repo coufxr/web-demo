@@ -10,11 +10,11 @@ pub struct Model {
     pub id: i32,
     #[sea_orm(unique)]
     pub uid: String,
-    pub r#type: u8,
+    pub r#type: i16,
     pub nickname: String,
     pub password: String,
     pub name: Option<String>,
-    pub gender: u8,
+    pub gender: i16,
     pub telephone: Option<String>,
     pub email: Option<String>,
     pub address: Option<String>,

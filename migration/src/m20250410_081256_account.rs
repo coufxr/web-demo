@@ -12,22 +12,41 @@ impl MigrationTrait for Migration {
                     .table(Account::Table)
                     .if_not_exists()
                     .col(pk_auto(Account::Id))
-                    .col(string_len_uniq(Account::Uid, 36).extra("COMMENT '账户唯一标识'"))
-                    .col(tiny_unsigned(Account::Type).extra("COMMENT '账户类型;1:用户;2:内部人员'"))
-                    .col(string(Account::Nickname).extra("COMMENT '昵称'"))
+                    .col(string_len_uniq(Account::Uid, 36))
+                    .col(small_integer(Account::Type))
+                    .col(string(Account::Nickname))
                     .col(string(Account::Password))
-                    .col(string_null(Account::Name).extra("COMMENT '用户名'"))
-                    .col(tiny_unsigned_null(Account::Gender).extra("COMMENT '性别;1:男;2:女'"))
-                    .col(string_len_null(Account::Telephone, 20).extra("COMMENT '手机号码'"))
-                    .col(string_null(Account::Email).extra("COMMENT '邮件地址'"))
-                    .col(string_null(Account::Address).extra("COMMENT '居住地址'"))
-                    .col(date_time_null(Account::LastLoginDt).extra("COMMENT '最后登录时间'"))
+                    .col(string_null(Account::Name))
+                    .col(small_integer_null(Account::Gender))
+                    .col(string_len_null(Account::Telephone, 20))
+                    .col(string_null(Account::Email))
+                    .col(string_null(Account::Address))
+                    .col(date_time_null(Account::LastLoginDt))
                     .col(date_time(Account::CreateTs).default(Expr::current_timestamp()))
                     .col(date_time(Account::UpdateTs).default(Expr::current_timestamp()))
                     .col(date_time_null(Account::DeleteTs))
                     .to_owned(),
             )
-            .await
+            .await?;
+
+        // PostgreSQL 使用 COMMENT ON COLUMN 添加列注释
+        let db = manager.get_connection();
+        db.execute_unprepared(
+            r#"
+            COMMENT ON COLUMN account.uid IS '账户唯一标识';
+            COMMENT ON COLUMN account.type IS '账户类型;1:用户;2:内部人员';
+            COMMENT ON COLUMN account.nickname IS '昵称';
+            COMMENT ON COLUMN account.name IS '用户名';
+            COMMENT ON COLUMN account.gender IS '性别;1:男;2:女';
+            COMMENT ON COLUMN account.telephone IS '手机号码';
+            COMMENT ON COLUMN account.email IS '邮件地址';
+            COMMENT ON COLUMN account.address IS '居住地址';
+            COMMENT ON COLUMN account.last_login_dt IS '最后登录时间';
+            "#,
+        )
+        .await?;
+
+        Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {

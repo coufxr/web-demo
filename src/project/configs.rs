@@ -34,7 +34,7 @@ pub struct Database {
 impl Database {
     pub fn url(&self) -> String {
         format!(
-            "mysql://{}:{}@{}:{}/{}",
+            "postgres://{}:{}@{}:{}/{}",
             self.username, self.password, self.host, self.port, self.dbname
         )
     }

@@ -15,8 +15,8 @@ use utoipa::ToSchema;
     Default,
     ToSchema,
 )]
-#[sea_orm(rs_type = "u8", db_type = "Integer")]
-#[repr(u8)]
+#[sea_orm(rs_type = "i16", db_type = "SmallInteger")]
+#[repr(i16)]
 pub enum ClassType {
     #[default]
     #[serde(rename = "1")]
@@ -38,8 +38,8 @@ pub enum ClassType {
     Default,
     ToSchema,
 )]
-#[sea_orm(rs_type = "u8", db_type = "Integer")]
-#[repr(u8)]
+#[sea_orm(rs_type = "i16", db_type = "SmallInteger")]
+#[repr(i16)]
 pub enum GenderType {
     #[default]
     #[serde(rename = "1")]

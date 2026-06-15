@@ -18,7 +18,7 @@ use validator::Validate;
 /// 获取用户列表
 #[utoipa::path(
     get,
-    path = "",
+    path = "/user",
     tag = "用户管理",
     params(UserListInput,PaginationInput),
     responses(
@@ -75,7 +75,7 @@ pub async fn user_list(
 /// 创建用户
 #[utoipa::path(
     post,
-    path = "",
+    path = "/user",
     tag = "用户管理",
     request_body = UserCreate,
     responses(
@@ -109,18 +109,16 @@ pub async fn user_create(
 /// 获取用户详情
 #[utoipa::path(
     get,
-    path = "/{id}",
+    path = "/user/{id}",
     tag = "用户管理",
+    params(("id" = u32, Path, description = "用户ID")),
     responses(
-        (status = 200),
+        (status = 200, body = UserOutput),
         (status = 404, description = "User not found")
     )
 )]
-pub async fn user_detail(
-    State(state): State<AppState>,
-    ResourceId(id): ResourceId,
-) -> ApiResult<UserOutput> {
-    let user = Account::Entity::find_by_id(id)
+pub async fn user_detail(State(state): State<AppState>, rid: ResourceId) -> ApiResult<UserOutput> {
+    let user = Account::Entity::find_by_id(rid.as_i32()?)
         .into_model::<UserOutput>()
         .one(&state.db)
         .await?
@@ -131,8 +129,9 @@ pub async fn user_detail(
 /// 更新用户
 #[utoipa::path(
     patch,
-    path = "/{id}",
+    path = "/user/{id}",
     tag = "用户管理",
+    params(("id" = u32, Path, description = "用户ID")),
     request_body = UserPatch,
     responses(
         (status = 200),
@@ -141,10 +140,10 @@ pub async fn user_detail(
 )]
 pub async fn user_patch(
     State(state): State<AppState>,
-    ResourceId(id): ResourceId,
+    rid: ResourceId,
     Json(data): Json<UserPatch>,
 ) -> ApiResult<()> {
-    let mut obj = Account::Entity::find_by_id(id)
+    let mut obj = Account::Entity::find_by_id(rid.as_i32()?)
         .one(&state.db)
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?
@@ -182,18 +181,16 @@ pub async fn user_patch(
 /// 删除用户
 #[utoipa::path(
     delete,
-    path = "/{id}",
+    path = "/user/{id}",
     tag = "用户管理",
+    params(("id" = u32, Path, description = "用户ID")),
     responses(
         (status = 200),
         (status = 404, description = "User not found")
     )
 )]
-pub async fn user_delete(
-    State(state): State<AppState>,
-    ResourceId(id): ResourceId,
-) -> ApiResult<()> {
-    let obj = Account::Entity::find_by_id(id)
+pub async fn user_delete(State(state): State<AppState>, rid: ResourceId) -> ApiResult<()> {
+    let obj = Account::Entity::find_by_id(rid.as_i32()?)
         .one(&state.db)
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?;

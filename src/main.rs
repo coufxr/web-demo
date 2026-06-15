@@ -1,17 +1,16 @@
-use axum::{middleware, routing::get};
+use axum::{Router, middleware, routing::get};
 use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::{Level, info};
-use utoipa::OpenApi;
-use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
 
-use apps::user::api_doc::ApiDoc;
+use api_doc::ApiDoc;
 use constants::AppState;
 use project::{configs::Configs, db, fallback, logger, middlewares::response::redirect_response};
 
+mod api_doc;
 mod apps;
 mod constants;
 mod helper;
@@ -51,16 +50,16 @@ async fn main() {
         .layer(CompressionLayer::new())
         .layer(middleware::from_fn(redirect_response));
 
-    let (app, mut openapi) = OpenApiRouter::new()
+    // OpenAPI 文档（utoipauto 自动收集，响应体自动包装为 JsonResponse）
+    let openapi = ApiDoc::spec();
+
+    let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
         .nest("/api/v1", apps::v1_routes())
+        .merge(Scalar::with_url("/docs", openapi))
         .fallback(fallback)
         .layer(middleware_stack)
-        .with_state(app_state)
-        .split_for_parts();
-
-    openapi.merge(ApiDoc::openapi());
-    let app = app.merge(Scalar::with_url("/docs", openapi));
+        .with_state(app_state);
 
     // 绑定监听地址
     let server_url = format!("{}:{}", &cfg.app.host, &cfg.app.port);

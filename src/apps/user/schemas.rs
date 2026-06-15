@@ -8,6 +8,7 @@ use crate::apps::user::constants::{ClassType, GenderType};
 use crate::helper::tools::{format_date_time, format_option_date_time};
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct UserListInput {
     pub name: Option<String>,
     pub telephone: Option<String>,
@@ -24,7 +25,7 @@ pub struct UserListOutput {
     pub telephone: Option<String>,
 }
 
-#[derive(Clone, Serialize, Deserialize, FromQueryResult)]
+#[derive(Clone, Serialize, Deserialize, FromQueryResult, ToSchema)]
 pub struct UserOutput {
     pub id: i32,
     pub uid: String,
@@ -36,8 +37,10 @@ pub struct UserOutput {
     pub address: Option<String>,
     pub r#type: ClassType,
     #[serde(serialize_with = "format_option_date_time")]
+    #[schema(value_type = Option<String>)]
     pub last_login_dt: Option<DateTimeLocal>,
     #[serde(serialize_with = "format_date_time")]
+    #[schema(value_type = String)]
     pub create_ts: DateTimeLocal,
 }
 

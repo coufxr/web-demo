@@ -1,19 +1,19 @@
-mod view;
+pub mod view;
 
-pub mod api_doc;
 pub mod constants;
 pub mod schemas;
 
-use utoipa_axum::{router::OpenApiRouter, routes};
+use axum::Router;
+use axum::routing::get;
 
 use crate::constants::AppState;
-use view::{
-    __path_user_create, __path_user_delete, __path_user_detail, __path_user_list,
-    __path_user_patch, user_create, user_delete, user_detail, user_list, user_patch,
-};
+use view::{user_create, user_delete, user_detail, user_list, user_patch};
 
-pub fn user_routes() -> OpenApiRouter<AppState> {
-    OpenApiRouter::new()
-        .routes(routes!(user_list, user_create))
-        .routes(routes!(user_detail, user_patch, user_delete))
+pub fn user_routes() -> Router<AppState> {
+    Router::new()
+        .route("/", get(user_list).post(user_create))
+        .route(
+            "/{id}",
+            get(user_detail).patch(user_patch).delete(user_delete),
+        )
 }

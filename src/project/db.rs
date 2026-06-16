@@ -1,9 +1,11 @@
 use std::time::Duration;
 
+use redis::RedisResult;
+use redis::aio::ConnectionManager;
 use sea_orm::{ConnectOptions, Database, DbConn};
 use tracing::info;
 
-use super::configs::Database as cfg_database;
+use super::configs::{Database as cfg_database, Redis as cfg_redis};
 
 /// 初始化数据库连接池
 pub async fn init(db: &cfg_database) -> Result<DbConn, sea_orm::DbErr> {
@@ -23,5 +25,17 @@ pub async fn init(db: &cfg_database) -> Result<DbConn, sea_orm::DbErr> {
     conn.ping().await?;
 
     info!("数据库连接池初始化完成");
+    Ok(conn)
+}
+
+/// 初始化 Redis 连接
+pub async fn init_redis(redis: &cfg_redis) -> RedisResult<ConnectionManager> {
+    // 创建客户端（内部管理连接池）
+    let client = redis::Client::open(redis.url())?;
+
+    // 创建连接管理器（自动管理连接池）
+    let conn = ConnectionManager::new(client).await?;
+
+    info!("Redis 连接初始化完成");
     Ok(conn)
 }

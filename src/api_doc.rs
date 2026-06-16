@@ -1,9 +1,24 @@
-use utoipa::OpenApi;
+use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 use utoipa::openapi::{
     self, Content, RefOr,
     schema::{Object, Schema, Type},
 };
+use utoipa::{Modify, OpenApi};
 use utoipauto::utoipauto;
+
+/// JWT Bearer 安全方案注入
+struct JwtSecurityAddon;
+
+impl Modify for JwtSecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        if let Some(components) = openapi.components.as_mut() {
+            components.add_security_scheme(
+                "bearer_auth",
+                SecurityScheme::Http(Http::new(HttpAuthScheme::Bearer)),
+            );
+        }
+    }
+}
 
 /// 顶层 API 文档元数据（utoipauto 自动收集 paths + schemas）
 #[utoipauto(paths = "./src")]
@@ -16,6 +31,10 @@ use utoipauto::utoipauto;
     ),
     servers(
         (url = "/api/v1", description = "API v1")
+    ),
+    modifiers(&JwtSecurityAddon),
+    security(
+        ("bearer_auth" = [])
     )
 )]
 pub struct ApiDoc;

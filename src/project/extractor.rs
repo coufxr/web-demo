@@ -6,8 +6,10 @@ use axum::{
 use super::error::AppError;
 
 /// 路径参数 ID 提取器（u32，保证非负）
+#[allow(dead_code)]
 pub struct ResourceId(pub u32);
 
+#[allow(dead_code)]
 impl ResourceId {
     /// 安全转换为 i32（与 Entity 主键类型匹配），超出范围返回 400
     pub fn as_i32(&self) -> Result<i32, AppError> {

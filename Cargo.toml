@@ -57,13 +57,31 @@ chrono = { workspace = true }
 uuid = { version = "1.23.3", features = ["v4"] }
 
 # 字段校验
-validator = { version = "0.20.0", features = ["derive"] }
+validator = { version = "0.18", features = ["derive"] }
 
 # 配置文件加载（默认 feature 包含 toml 解析）
 config = "0.15.23"
 
 # HTTP body 工具（中间件读取响应 body）
 http-body-util = "0.1.3"
+
+# JWT 认证
+jsonwebtoken = "9.3"
+
+# 密码哈希
+bcrypt = "0.16"
+
+# 随机数生成（验证码）
+rand = "0.8"
+
+# Redis 客户端
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
+
+# 正则表达式
+regex = "1.10"
+
+# URL 编码（Redis 密码特殊字符处理）
+percent-encoding = "2.3"
 
 # OpenAPI 文档生成 + Scalar UI
 utoipa = { version = "5.5.0", features = ["chrono"] }

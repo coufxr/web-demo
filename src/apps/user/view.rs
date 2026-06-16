@@ -1,8 +1,8 @@
+use super::constants::ClassType;
 use super::schemas::{UserCreate, UserListInput, UserListOutput, UserOutput, UserPatch};
-use crate::apps::user::constants::ClassType;
 use crate::constants::AppState;
 use crate::project::error::{ApiResult, AppError, ok};
-use crate::project::extractor::ResourceId;
+use crate::project::middlewares::auth::AuthContext;
 use crate::project::pagination::{PagePagination, PaginationInput};
 use axum::extract::State;
 use axum::extract::{Json, Query};
@@ -18,7 +18,7 @@ use validator::Validate;
 /// 获取用户列表
 #[utoipa::path(
     get,
-    path = "/user",
+    path = "/user/list",
     tag = "用户管理",
     params(UserListInput,PaginationInput),
     responses(
@@ -88,10 +88,19 @@ pub async fn user_create(
     Json(input): Json<UserCreate>,
 ) -> ApiResult<()> {
     input.validate()?;
+
+    // 密码哈希
+    let hashed_password = bcrypt::hash(&input.password, bcrypt::DEFAULT_COST).map_err(|e| {
+        AppError::Api(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("密码哈希失败: {}", e),
+        )
+    })?;
+
     let obj = Account::ActiveModel {
         uid: Set(Uuid::new_v4().to_string()),
         nickname: Set(input.nickname),
-        password: Set(input.password),
+        password: Set(hashed_password),
         name: Set(input.name),
         gender: Set(input.gender.map(|t| t as i16).unwrap_or(0)),
         telephone: Set(input.telephone),
@@ -101,24 +110,26 @@ pub async fn user_create(
         ..Default::default()
     };
 
-    let _obj: Account::Model = obj.insert(&state.db).await?;
+    let _obj = obj.insert(&state.db).await?;
 
     ok(())
 }
 
-/// 获取用户详情
+/// 获取当前用户信息
 #[utoipa::path(
     get,
-    path = "/user/{id}",
+    path = "/user",
     tag = "用户管理",
-    params(("id" = u32, Path, description = "用户ID")),
     responses(
         (status = 200, body = UserOutput),
         (status = 404, description = "User not found")
     )
 )]
-pub async fn user_detail(State(state): State<AppState>, rid: ResourceId) -> ApiResult<UserOutput> {
-    let user = Account::Entity::find_by_id(rid.as_i32()?)
+pub async fn user_detail(
+    State(state): State<AppState>,
+    auth: AuthContext,
+) -> ApiResult<UserOutput> {
+    let user = Account::Entity::find_by_id(auth.user_id)
         .into_model::<UserOutput>()
         .one(&state.db)
         .await?
@@ -126,12 +137,11 @@ pub async fn user_detail(State(state): State<AppState>, rid: ResourceId) -> ApiR
     ok(user)
 }
 
-/// 更新用户
+/// 更新当前用户信息
 #[utoipa::path(
     patch,
-    path = "/user/{id}",
+    path = "/user",
     tag = "用户管理",
-    params(("id" = u32, Path, description = "用户ID")),
     request_body = UserPatch,
     responses(
         (status = 200),
@@ -140,26 +150,31 @@ pub async fn user_detail(State(state): State<AppState>, rid: ResourceId) -> ApiR
 )]
 pub async fn user_patch(
     State(state): State<AppState>,
-    rid: ResourceId,
+    auth: AuthContext,
     Json(data): Json<UserPatch>,
 ) -> ApiResult<()> {
-    let mut obj = Account::Entity::find_by_id(rid.as_i32()?)
+    data.validate()?;
+    let mut obj = Account::Entity::find_by_id(auth.user_id)
         .one(&state.db)
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?
         .into_active_model();
 
-    // 非空字段需要解包 Option
     if let Some(v) = data.nickname {
         obj.nickname = Set(v)
     }
     if let Some(v) = data.password {
-        obj.password = Set(v)
+        let hashed_password = bcrypt::hash(&v, bcrypt::DEFAULT_COST).map_err(|e| {
+            AppError::Api(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("密码哈希失败: {}", e),
+            )
+        })?;
+        obj.password = Set(hashed_password)
     }
     if let Some(v) = data.gender {
         obj.gender = Set(v as i16)
     }
-    // 可空字段直接传 Option
     if data.name.is_some() {
         obj.name = Set(data.name)
     }
@@ -173,24 +188,22 @@ pub async fn user_patch(
         obj.address = Set(data.address)
     }
 
-    let _obj = obj.update(&state.db).await?;
-
+    obj.update(&state.db).await?;
     ok(())
 }
 
-/// 删除用户
+/// 删除当前用户
 #[utoipa::path(
     delete,
-    path = "/user/{id}",
+    path = "/user",
     tag = "用户管理",
-    params(("id" = u32, Path, description = "用户ID")),
     responses(
         (status = 200),
         (status = 404, description = "User not found")
     )
 )]
-pub async fn user_delete(State(state): State<AppState>, rid: ResourceId) -> ApiResult<()> {
-    let obj = Account::Entity::find_by_id(rid.as_i32()?)
+pub async fn user_delete(State(state): State<AppState>, auth: AuthContext) -> ApiResult<()> {
+    let obj = Account::Entity::find_by_id(auth.user_id)
         .one(&state.db)
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::NOT_FOUND, "用户不存在".to_string()))?;

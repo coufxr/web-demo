@@ -8,6 +8,7 @@ pub mod extractor;
 pub mod logger;
 pub mod middlewares;
 pub mod pagination;
+pub mod redis;
 pub mod response;
 
 pub async fn fallback() -> Response {

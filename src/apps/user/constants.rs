@@ -25,7 +25,7 @@ pub enum ClassType {
     InternalStaff = 2,
 }
 
-/// 性别: 1-男, 2-女
+/// 性别: 0-未知, 1-男, 2-女
 #[derive(
     EnumIter,
     DeriveActiveEnum,
@@ -42,6 +42,8 @@ pub enum ClassType {
 #[repr(i16)]
 pub enum GenderType {
     #[default]
+    #[serde(rename = "0")]
+    Unknown = 0,
     #[serde(rename = "1")]
     Male = 1,
     #[serde(rename = "2")]

@@ -1,10 +1,10 @@
 use sea_orm::FromQueryResult;
-use sea_orm::prelude::DateTimeLocal;
+use sea_orm::prelude::DateTime;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
-use crate::apps::user::constants::{ClassType, GenderType};
+use super::constants::{ClassType, GenderType};
 use crate::helper::tools::{format_date_time, format_option_date_time};
 
 #[derive(Debug, Deserialize, Validate, ToSchema, IntoParams)]
@@ -38,10 +38,10 @@ pub struct UserOutput {
     pub r#type: ClassType,
     #[serde(serialize_with = "format_option_date_time")]
     #[schema(value_type = Option<String>)]
-    pub last_login_dt: Option<DateTimeLocal>,
+    pub last_login_dt: Option<DateTime>,
     #[serde(serialize_with = "format_date_time")]
     #[schema(value_type = String)]
-    pub create_ts: DateTimeLocal,
+    pub create_ts: DateTime,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Validate)]
@@ -57,9 +57,10 @@ pub struct UserCreate {
     pub address: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, Validate)]
 pub struct UserPatch {
     pub nickname: Option<String>,
+    #[validate(length(min = 6, message = "密码长度不能少于6位"))]
     pub password: Option<String>,
     pub name: Option<String>,
     pub gender: Option<GenderType>,

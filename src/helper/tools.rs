@@ -1,7 +1,7 @@
-use sea_orm::prelude::DateTimeLocal;
+use chrono::NaiveDateTime;
 use serde::Serializer;
 
-pub fn format_date_time<S>(dt: &DateTimeLocal, serializer: S) -> Result<S::Ok, S::Error>
+pub fn format_date_time<S>(dt: &NaiveDateTime, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -10,7 +10,7 @@ where
 }
 
 pub fn format_option_date_time<S>(
-    dt: &Option<DateTimeLocal>,
+    dt: &Option<NaiveDateTime>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where

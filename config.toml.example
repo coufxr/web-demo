@@ -15,3 +15,15 @@ port=
 username=
 password=
 dbname=
+
+[jwt]
+secret=
+expires_in_hours=
+refresh_secret=
+refresh_expires_in_days=
+
+[redis]
+host=
+port=
+password=
+db=

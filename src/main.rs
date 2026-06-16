@@ -7,8 +7,9 @@ use tracing::{Level, info};
 use utoipa_scalar::{Scalar, Servable};
 
 use api_doc::ApiDoc;
-use constants::AppState;
-use project::{configs::Configs, db, fallback, logger, middlewares::response::redirect_response};
+use constants::{AppState, CONFIG};
+use project::middlewares::auth::auth_middleware;
+use project::{db, fallback, logger, middlewares::response::redirect_response};
 
 mod api_doc;
 mod apps;
@@ -18,14 +19,12 @@ mod project;
 
 #[tokio::main]
 async fn main() {
-    // 加载配置文件（config.toml）
-    let cfg = Configs::new();
     // 初始化日志系统，返回 guard 用于保持日志写入器存活
     // guard 必须保持到程序结束，否则日志可能未写入就丢失
-    let _guard = logger::init(&cfg);
+    let _guard = logger::init(&CONFIG);
 
     // 初始化数据库连接
-    let db = db::init(&cfg.database).await.expect("数据库连接失败");
+    let db = db::init(&CONFIG.database).await.expect("数据库连接失败");
 
     // 自动同步 Entity 定义到数据库表结构
     db.get_schema_registry("entity::*")
@@ -33,21 +32,29 @@ async fn main() {
         .await
         .expect("数据库同步失败");
 
+    // 初始化 Redis 连接
+    let redis_conn = db::init_redis(&CONFIG.redis).await.expect("Redis 连接失败");
+
     // 请求日志中间件：记录每个请求和响应
     let trace = TraceLayer::new_for_http()
         .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
         .on_response(DefaultOnResponse::new().level(Level::INFO));
 
     // 应用状态，通过 State 注入到 handler
-    let app_state = AppState { db };
+    let app_state = AppState {
+        db,
+        redis: redis_conn,
+    };
 
-    // 中间件堆栈（自下而上执行）：
-    // 1. trace - 请求日志
-    // 2. CompressionLayer - 响应压缩
-    // 3. redirect_response - 自定义响应处理
+    // 中间件堆栈（自外向内执行）：
+    // 1. redirect_response - 自定义响应处理
+    // 2. auth_middleware - JWT 认证（公开路径自动跳过）
+    // 3. CompressionLayer - 响应压缩
+    // 4. trace - 请求日志
     let middleware_stack = ServiceBuilder::new()
         .layer(trace)
         .layer(CompressionLayer::new())
+        .layer(middleware::from_fn(auth_middleware))
         .layer(middleware::from_fn(redirect_response));
 
     // OpenAPI 文档（utoipauto 自动收集，响应体自动包装为 JsonResponse）
@@ -62,7 +69,7 @@ async fn main() {
         .with_state(app_state);
 
     // 绑定监听地址
-    let server_url = format!("{}:{}", &cfg.app.host, &cfg.app.port);
+    let server_url = format!("{}:{}", &CONFIG.app.host, &CONFIG.app.port);
     let listener = tokio::net::TcpListener::bind(&server_url).await.unwrap();
     info!("listening on http://{}", listener.local_addr().unwrap());
 

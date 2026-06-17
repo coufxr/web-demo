@@ -26,6 +26,7 @@ chrono = "0.4.42"
 [dependencies]
 # 内部模块
 entity = { path = "entity" }
+macros = { path = "macros" }
 
 # Web 框架
 axum = "0.8.9"
@@ -70,6 +71,15 @@ jsonwebtoken = "9.3"
 
 # 密码哈希
 bcrypt = "0.16"
+
+# OAuth2 客户端
+oauth2 = { version = "4", features = ["reqwest"] }
+
+# HTTP 客户端（用于 OAuth2 token 交换和 GitHub API 调用）
+reqwest = { version = "0.12", features = ["json"] }
+
+# URL 解析
+url = "2"
 
 # 随机数生成（验证码）
 rand = "0.8"

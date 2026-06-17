@@ -1,29 +1,24 @@
-use axum::extract::Json;
-use axum::extract::State;
+use ::oauth2::AuthorizationCode;
+use ::oauth2::TokenResponse as _;
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use axum::response::Redirect;
 use entity::prelude::Account;
-use rand::Rng;
-use redis::AsyncCommands;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, IntoActiveModel, QueryFilter};
+use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
-use validator::Validate;
 
 use super::jwt;
+use super::oauth2::{self, fetch_user_info, generate_auth_url, get_oauth2_client};
 use super::schemas::{LoginInput, LoginOutput, RefreshInput, RegisterInput, SendSmsCodeInput};
 use crate::apps::user::constants::ClassType;
-use crate::constants::{AppState, CONFIG};
+use crate::constants::AppState;
+use crate::helper::crypto;
+use crate::helper::sms;
 use crate::project::error::{ApiResult, AppError, ok};
-use crate::rate_limit_check;
-
-/// 验证码前缀（Redis key）
-const SMS_CODE_PREFIX: &str = "sms:code:";
-/// 验证码有效期（5分钟）
-const SMS_CODE_EXPIRE_SECONDS: u64 = 300;
-/// 验证码发送频率限制前缀（Redis key）
-const SMS_LIMIT_PREFIX: &str = "sms:limit:";
-/// 验证码发送最小间隔（60秒）
-const SMS_MIN_INTERVAL_SECONDS: u64 = 60;
+use crate::project::extractor::ValidatedJson;
+use crate::project::redis;
 
 /// 发送验证码
 #[utoipa::path(
@@ -39,36 +34,9 @@ const SMS_MIN_INTERVAL_SECONDS: u64 = 60;
 )]
 pub async fn send_sms_code(
     State(state): State<AppState>,
-    Json(input): Json<SendSmsCodeInput>,
+    ValidatedJson(input): ValidatedJson<SendSmsCodeInput>,
 ) -> ApiResult<()> {
-    input.validate()?;
-
-    // 检查发送频率限制
-    let limit_key = format!("{}{}", SMS_LIMIT_PREFIX, input.phone);
-    rate_limit_check!(state.redis, &limit_key, SMS_MIN_INTERVAL_SECONDS);
-
-    // 生成6位数字验证码
-    let code: String = rand::thread_rng().gen_range(100000..=999999).to_string();
-
-    // 存入验证码，设置过期时间
-    let mut conn = state.redis.clone();
-    let code_key = format!("{}{}", SMS_CODE_PREFIX, input.phone);
-    let _: () = conn
-        .set_ex(&code_key, &code, SMS_CODE_EXPIRE_SECONDS)
-        .await
-        .map_err(|e| {
-            AppError::Api(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("验证码存储失败: {}", e),
-            )
-        })?;
-
-    // 在日志中输出验证码（实际项目中应接入短信服务）
-    info!(
-        "📱 验证码已发送 -> 手机号: {}, 验证码: {}",
-        input.phone, code
-    );
-
+    sms::send_code(&state.redis, &input.phone).await?;
     ok(())
 }
 
@@ -86,41 +54,10 @@ pub async fn send_sms_code(
 )]
 pub async fn register(
     State(state): State<AppState>,
-    Json(input): Json<RegisterInput>,
+    ValidatedJson(input): ValidatedJson<RegisterInput>,
 ) -> ApiResult<()> {
-    input.validate()?;
-
-    let key = format!("{}{}", SMS_CODE_PREFIX, input.phone);
-    let mut conn = state.redis.clone();
-
-    // 获取验证码
-    let stored_code: Option<String> = conn.get(&key).await.map_err(|e| {
-        AppError::Api(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("验证码获取失败: {}", e),
-        )
-    })?;
-
-    // 验证码不存在（已过期或未发送）
-    let stored_code = stored_code.ok_or_else(|| {
-        AppError::Api(StatusCode::BAD_REQUEST, "验证码已过期或不存在".to_string())
-    })?;
-
-    // 验证码已被使用
-    if stored_code.ends_with(":used") {
-        return Err(AppError::Api(
-            StatusCode::BAD_REQUEST,
-            "验证码已被使用".to_string(),
-        ));
-    }
-
-    // 验证码错误
-    if stored_code != input.code {
-        return Err(AppError::Api(
-            StatusCode::BAD_REQUEST,
-            "验证码错误".to_string(),
-        ));
-    }
+    // 校验验证码
+    sms::verify_code(&state.redis, &input.phone, &input.code).await?;
 
     // 检查手机号是否已注册（先检查，避免浪费验证码）
     let existing_user = Account::Entity::find()
@@ -136,12 +73,7 @@ pub async fn register(
     }
 
     // 密码哈希
-    let hashed_password = bcrypt::hash(&input.password, bcrypt::DEFAULT_COST).map_err(|e| {
-        AppError::Api(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("密码哈希失败: {}", e),
-        )
-    })?;
+    let hashed_password = crypto::hash_password(&input.password)?;
 
     // 创建用户
     let obj = Account::ActiveModel {
@@ -155,13 +87,6 @@ pub async fn register(
     };
 
     obj.insert(&state.db).await?;
-
-    // 标记验证码为已使用
-    let used_code = format!("{}:used", input.code);
-    let _: Result<(), _> = conn
-        .set_ex(&key, &used_code, SMS_CODE_EXPIRE_SECONDS)
-        .await
-        .inspect_err(|e| tracing::error!("验证码状态更新失败: {}", e));
 
     ok(())
 }
@@ -180,10 +105,8 @@ pub async fn register(
 )]
 pub async fn login(
     State(state): State<AppState>,
-    Json(input): Json<LoginInput>,
+    ValidatedJson(input): ValidatedJson<LoginInput>,
 ) -> ApiResult<LoginOutput> {
-    input.validate()?;
-
     // 查找用户
     let user = Account::Entity::find()
         .filter(Account::Column::Telephone.eq(input.phone.clone()))
@@ -191,13 +114,14 @@ pub async fn login(
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::UNAUTHORIZED, "手机号或密码错误".to_string()))?;
 
-    // 验证密码
-    let password_valid = bcrypt::verify(&input.password, &user.password).map_err(|e| {
-        AppError::Api(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("密码验证失败: {}", e),
-        )
-    })?;
+    // 验证密码（OAuth 用户密码为空，直接拒绝）
+    if user.password.is_empty() {
+        return Err(AppError::Api(
+            StatusCode::UNAUTHORIZED,
+            "手机号或密码错误".to_string(),
+        ));
+    }
+    let password_valid = crypto::verify_password(&input.password, &user.password)?;
 
     if !password_valid {
         return Err(AppError::Api(
@@ -212,25 +136,7 @@ pub async fn login(
     active_model.update(&state.db).await?;
 
     // 生成双 Token
-    let token = jwt::create_access_token(user.id, &input.phone).map_err(|e| {
-        AppError::Api(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Token 生成失败: {}", e),
-        )
-    })?;
-    let refresh_token = jwt::create_refresh_token(user.id, &input.phone).map_err(|e| {
-        AppError::Api(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Refresh Token 生成失败: {}", e),
-        )
-    })?;
-
-    ok(LoginOutput {
-        token,
-        expires_in: (CONFIG.jwt.expires_in_hours as i64) * 3600,
-        refresh_token,
-        refresh_expires_in: (CONFIG.jwt.refresh_expires_in_days as i64) * 86400,
-    })
+    ok(jwt::generate_token_pair(user.id)?)
 }
 
 /// 刷新 Token
@@ -247,7 +153,7 @@ pub async fn login(
 )]
 pub async fn refresh(
     State(state): State<AppState>,
-    Json(input): Json<RefreshInput>,
+    ValidatedJson(input): ValidatedJson<RefreshInput>,
 ) -> ApiResult<LoginOutput> {
     // 验证 Refresh Token
     let claims = jwt::verify_refresh_token(&input.refresh_token).map_err(|_| {
@@ -257,31 +163,157 @@ pub async fn refresh(
         )
     })?;
 
+    // 检查是否已被撤销（原子操作）
+    let blacklist_key = format!("token:blacklist:{}", claims.jti);
+    let ttl = claims.exp - chrono::Utc::now().timestamp();
+    if ttl >= 0 {
+        let was_set = redis::set_nx_with_expire(&state.redis, &blacklist_key, ttl + 1).await?;
+        if !was_set {
+            return Err(AppError::Api(
+                StatusCode::UNAUTHORIZED,
+                "Refresh Token 已失效".to_string(),
+            ));
+        }
+    }
+
     // 查询用户确认存在
     let user = Account::Entity::find()
-        .filter(Account::Column::Id.eq(claims.user_id))
+        .filter(Account::Column::Id.eq(claims.sub))
         .one(&state.db)
         .await?
         .ok_or_else(|| AppError::Api(StatusCode::UNAUTHORIZED, "用户不存在".to_string()))?;
 
     // 生成新双 Token
-    let token = jwt::create_access_token(user.id, &claims.phone).map_err(|e| {
-        AppError::Api(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Token 生成失败: {}", e),
-        )
-    })?;
-    let refresh_token = jwt::create_refresh_token(user.id, &claims.phone).map_err(|e| {
-        AppError::Api(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Refresh Token 生成失败: {}", e),
-        )
-    })?;
+    ok(jwt::generate_token_pair(user.id)?)
+}
 
-    ok(LoginOutput {
-        token,
-        expires_in: (CONFIG.jwt.expires_in_hours as i64) * 3600,
-        refresh_token,
-        refresh_expires_in: (CONFIG.jwt.refresh_expires_in_days as i64) * 86400,
-    })
+/// OAuth2 回调参数
+#[derive(Debug, Deserialize)]
+pub struct OauthCallbackParams {
+    pub code: Option<String>,
+    pub state: Option<String>,
+    pub error: Option<String>,
+    pub error_description: Option<String>,
+}
+
+/// CSRF token 前缀（Redis key）
+const CSRF_TOKEN_PREFIX: &str = "oauth2:csrf:";
+/// CSRF token 有效期（10分钟）
+const CSRF_TOKEN_EXPIRE_SECONDS: u64 = 600;
+
+/// OAuth2 登录 - 重定向到对应提供商授权页
+#[utoipa::path(
+    get,
+    path = "/auth/oauth2/{provider}",
+    tag = "认证",
+    security(()),
+    responses(
+        (status = 302, description = "重定向到 OAuth2 授权页"),
+        (status = 500, description = "内部错误")
+    )
+)]
+pub async fn oauth2_login(
+    State(state): State<AppState>,
+    Path(provider): Path<String>,
+) -> Result<Redirect, AppError> {
+    let client = get_oauth2_client(&provider)?;
+    let (auth_url, csrf_token) = generate_auth_url(client, &provider)?;
+
+    // 将 csrf_token 存入 Redis，供回调时验证
+    let csrf_key = format!("{}{}", CSRF_TOKEN_PREFIX, csrf_token.secret());
+    redis::set_ex(
+        &state.redis,
+        &csrf_key,
+        &provider,
+        CSRF_TOKEN_EXPIRE_SECONDS,
+    )
+    .await?;
+
+    Ok(Redirect::temporary(auth_url.as_str()))
+}
+
+/// OAuth2 回调 - 处理授权码，创建/关联用户，返回 JWT token
+#[utoipa::path(
+    get,
+    path = "/auth/oauth2/{provider}/callback",
+    tag = "认证",
+    params(
+        ("code" = String, Query, description = "授权码"),
+        ("state" = Option<String>, Query, description = "CSRF token")
+    ),
+    security(()),
+    responses(
+        (status = 200, body = LoginOutput),
+        (status = 400, description = "OAuth2 错误"),
+        (status = 500, description = "内部错误")
+    )
+)]
+pub async fn oauth2_callback(
+    State(state): State<AppState>,
+    Path(provider): Path<String>,
+    Query(params): Query<OauthCallbackParams>,
+) -> ApiResult<LoginOutput> {
+    // 0. 检查提供商是否返回错误
+    if let Some(error) = params.error {
+        let desc = params.error_description.unwrap_or_default();
+        tracing::warn!("OAuth2 授权被拒绝 ({}): {} - {}", provider, error, desc);
+        return Err(AppError::Api(
+            StatusCode::BAD_REQUEST,
+            "OAuth2 授权被拒绝".to_string(),
+        ));
+    }
+
+    let code = params
+        .code
+        .ok_or_else(|| AppError::Api(StatusCode::BAD_REQUEST, "缺少授权码".to_string()))?;
+
+    // 1. 验证 CSRF token（原子操作：获取并删除）
+    let csrf_state = params
+        .state
+        .ok_or_else(|| AppError::Api(StatusCode::BAD_REQUEST, "无效的请求参数".to_string()))?;
+
+    let csrf_key = format!("{}{}", CSRF_TOKEN_PREFIX, csrf_state);
+    let stored_provider = redis::get_del(&state.redis, &csrf_key).await?;
+
+    if stored_provider.is_none() {
+        return Err(AppError::Api(
+            StatusCode::BAD_REQUEST,
+            "CSRF token 无效或已过期".to_string(),
+        ));
+    }
+    if stored_provider.as_deref() != Some(&provider) {
+        return Err(AppError::Api(
+            StatusCode::BAD_REQUEST,
+            "CSRF token 不匹配".to_string(),
+        ));
+    }
+
+    // 2. 用 authorization code 换取 access token
+    let client = get_oauth2_client(&provider)?;
+    let token_result = client
+        .exchange_code(AuthorizationCode::new(code))
+        .request_async(::oauth2::reqwest::async_http_client)
+        .await
+        .map_err(|e| {
+            tracing::error!("OAuth2 token 交换失败 ({}): {}", provider, e);
+            AppError::Api(StatusCode::BAD_REQUEST, "OAuth2 授权失败".to_string())
+        })?;
+
+    let access_token = token_result.access_token().secret();
+
+    // 3. 用 access token 获取用户信息
+    let user_info = fetch_user_info(access_token, &provider).await?;
+
+    // 4. 查找或创建本地用户并绑定 OAuth 身份
+    let user = oauth2::link_or_create_account(&state.db, &provider, &user_info).await?;
+
+    // 5. 生成 JWT token
+    let output = jwt::generate_token_pair(user.id)?;
+
+    info!(
+        "OAuth2 登录成功 -> 提供商: {}, 用户: {}",
+        provider, user.nickname
+    );
+
+    ok(output)
 }

@@ -1,9 +1,10 @@
 use axum::Router;
-use axum::routing::post;
+use axum::routing::{get, post};
 
 use crate::constants::AppState;
 
 pub mod jwt;
+pub mod oauth2;
 pub mod schemas;
 pub mod view;
 
@@ -14,4 +15,6 @@ pub fn auth_routes() -> Router<AppState> {
         .route("/register", post(view::register))
         .route("/login", post(view::login))
         .route("/refresh", post(view::refresh))
+        .route("/{provider}", get(view::oauth2_login))
+        .route("/{provider}/callback", get(view::oauth2_callback))
 }

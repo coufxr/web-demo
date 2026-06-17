@@ -3,5 +3,6 @@
 pub mod prelude;
 
 pub mod account;
+pub mod oauth_account;
 
 pub use macros::soft_delete;

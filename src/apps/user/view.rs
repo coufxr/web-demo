@@ -1,11 +1,13 @@
 use super::constants::ClassType;
 use super::schemas::{UserCreate, UserListInput, UserListOutput, UserOutput, UserPatch};
 use crate::constants::AppState;
+use crate::helper::crypto;
 use crate::project::error::{ApiResult, AppError, ok};
+use crate::project::extractor::ValidatedJson;
+use crate::project::extractor::ValidatedQuery;
 use crate::project::middlewares::auth::AuthContext;
 use crate::project::pagination::{PagePagination, PaginationInput};
 use axum::extract::State;
-use axum::extract::{Json, Query};
 use axum::http::StatusCode;
 use entity::prelude::Account;
 use sea_orm::{
@@ -13,7 +15,6 @@ use sea_orm::{
     QueryFilter, QueryOrder, QuerySelect,
 };
 use uuid::Uuid;
-use validator::Validate;
 
 /// 获取用户列表
 #[utoipa::path(
@@ -27,11 +28,9 @@ use validator::Validate;
 )]
 pub async fn user_list(
     State(state): State<AppState>,
-    Query(input): Query<UserListInput>,
-    Query(pagination): Query<PaginationInput>,
+    ValidatedQuery(input): ValidatedQuery<UserListInput>,
+    ValidatedQuery(pagination): ValidatedQuery<PaginationInput>,
 ) -> ApiResult<PagePagination<UserListOutput>> {
-    input.validate()?;
-
     let page = pagination.page;
     let page_size = pagination.page_size;
 
@@ -85,17 +84,10 @@ pub async fn user_list(
 )]
 pub async fn user_create(
     State(state): State<AppState>,
-    Json(input): Json<UserCreate>,
+    ValidatedJson(input): ValidatedJson<UserCreate>,
 ) -> ApiResult<()> {
-    input.validate()?;
-
     // 密码哈希
-    let hashed_password = bcrypt::hash(&input.password, bcrypt::DEFAULT_COST).map_err(|e| {
-        AppError::Api(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("密码哈希失败: {}", e),
-        )
-    })?;
+    let hashed_password = crypto::hash_password(&input.password)?;
 
     let obj = Account::ActiveModel {
         uid: Set(Uuid::new_v4().to_string()),
@@ -151,9 +143,8 @@ pub async fn user_detail(
 pub async fn user_patch(
     State(state): State<AppState>,
     auth: AuthContext,
-    Json(data): Json<UserPatch>,
+    ValidatedJson(data): ValidatedJson<UserPatch>,
 ) -> ApiResult<()> {
-    data.validate()?;
     let mut obj = Account::Entity::find_by_id(auth.user_id)
         .one(&state.db)
         .await?
@@ -164,12 +155,7 @@ pub async fn user_patch(
         obj.nickname = Set(v)
     }
     if let Some(v) = data.password {
-        let hashed_password = bcrypt::hash(&v, bcrypt::DEFAULT_COST).map_err(|e| {
-            AppError::Api(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("密码哈希失败: {}", e),
-            )
-        })?;
+        let hashed_password = crypto::hash_password(&v)?;
         obj.password = Set(hashed_password)
     }
     if let Some(v) = data.gender {

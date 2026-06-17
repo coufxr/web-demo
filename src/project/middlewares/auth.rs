@@ -12,8 +12,6 @@ use crate::{apps::auth::jwt, project::error::AppError};
 #[derive(Clone)]
 pub struct AuthContext {
     pub user_id: i32,
-    #[allow(dead_code)]
-    pub phone: String,
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for AuthContext {
@@ -37,12 +35,23 @@ const PUBLIC_PATHS: &[&str] = &[
     "/docs",
     "/scalar",
     "/openapi.json",
+    "/favicon.ico",
 ];
 
 /// 检查路径是否公开（不需要鉴权）
 fn is_public_path(path: &str) -> bool {
     let path = path.trim_end_matches('/');
-    PUBLIC_PATHS.contains(&path)
+    if PUBLIC_PATHS.contains(&path) {
+        return true;
+    }
+    // 匹配 /api/v1/auth/{provider} 和 /api/v1/auth/{provider}/callback
+    if let Some(rest) = path.strip_prefix("/api/v1/auth/") {
+        let parts: Vec<&str> = rest.split('/').collect();
+        if parts.len() == 1 || (parts.len() == 2 && parts[1] == "callback") {
+            return true;
+        }
+    }
+    false
 }
 
 /// JWT 认证中间件
@@ -66,14 +75,13 @@ pub async fn auth_middleware(mut request: Request<Body>, next: Next) -> Result<R
         .strip_prefix("Bearer ")
         .ok_or_else(|| AppError::Api(StatusCode::UNAUTHORIZED, "认证格式错误".to_string()))?;
 
-    // 验证 token（jsonwebtoken 会自动验证 exp 过期时间）
+    // 验证 token
     let claims = jwt::verify_access_token(token)
-        .map_err(|e| AppError::Api(StatusCode::UNAUTHORIZED, format!("Token 无效: {}", e)))?;
+        .map_err(|_| AppError::Api(StatusCode::UNAUTHORIZED, "Token 无效或已过期".to_string()))?;
 
     // 将用户信息插入请求扩展
     request.extensions_mut().insert(AuthContext {
-        user_id: claims.user_id,
-        phone: claims.phone,
+        user_id: claims.sub,
     });
 
     Ok(next.run(request).await)

@@ -1,35 +1,66 @@
-/// 检查并设置频率限制
-///
-/// - 如果 key 不存在，设置 key 并返回 Ok(())
-/// - 如果 key 已存在，返回 Err(TOO_MANY_REQUESTS)
-///
-/// # Usage
-/// ```rust
-/// rate_limit_check!(state.redis, "sms:limit:13800138000", 60)?;
-/// ```
-#[macro_export]
-macro_rules! rate_limit_check {
-    ($redis:expr, $key:expr, $expire:expr) => {{
-        use axum::http::StatusCode;
-        use redis::AsyncCommands;
-        let mut conn = $redis.clone();
-        let was_set: bool = conn.set_nx($key, "1").await.map_err(|e| {
-            $crate::project::error::AppError::Api(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("频率限制检查失败: {}", e),
-            )
+use crate::project::error::AppError;
+
+/// Redis SETEX 辅助函数
+pub async fn set_ex(
+    redis: &redis::aio::ConnectionManager,
+    key: &str,
+    value: &str,
+    ttl: u64,
+) -> Result<(), AppError> {
+    use redis::AsyncCommands;
+    let mut conn = redis.clone();
+    conn.set_ex(key, value, ttl).await.map_err(|e| {
+        tracing::error!("Redis SETEX 失败 ({}): {}", key, e);
+        AppError::internal("服务器内部错误")
+    })
+}
+
+/// Redis GET 辅助函数
+#[allow(dead_code)]
+pub async fn get(
+    redis: &redis::aio::ConnectionManager,
+    key: &str,
+) -> Result<Option<String>, AppError> {
+    use redis::AsyncCommands;
+    let mut conn = redis.clone();
+    conn.get(key).await.map_err(|e| {
+        tracing::error!("Redis GET 失败 ({}): {}", key, e);
+        AppError::internal("服务器内部错误")
+    })
+}
+
+/// Redis GETDEL 辅助函数
+pub async fn get_del(
+    redis: &redis::aio::ConnectionManager,
+    key: &str,
+) -> Result<Option<String>, AppError> {
+    use redis::AsyncCommands;
+    let mut conn = redis.clone();
+    conn.get_del(key).await.map_err(|e| {
+        tracing::error!("Redis GETDEL 失败 ({}): {}", key, e);
+        AppError::internal("服务器内部错误")
+    })
+}
+
+/// Redis SET NX EX（原子频率限制）
+/// 返回 true 表示首次设置（通过），false 表示已存在（频率限制）
+pub async fn set_nx_with_expire(
+    redis: &redis::aio::ConnectionManager,
+    key: &str,
+    ttl: i64,
+) -> Result<bool, AppError> {
+    let mut conn = redis.clone();
+    let result: Option<String> = redis::cmd("SET")
+        .arg(key)
+        .arg("1")
+        .arg("NX")
+        .arg("EX")
+        .arg(ttl)
+        .query_async(&mut conn)
+        .await
+        .map_err(|e| {
+            tracing::error!("Redis SET NX EX 失败 ({}): {}", key, e);
+            AppError::internal("服务器内部错误")
         })?;
-        if !was_set {
-            return Err($crate::project::error::AppError::Api(
-                StatusCode::TOO_MANY_REQUESTS,
-                "发送过于频繁，请稍后再试".to_string(),
-            ));
-        }
-        let _: () = conn.expire($key, $expire as i64).await.map_err(|e| {
-            $crate::project::error::AppError::Api(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("频率限制设置失败: {}", e),
-            )
-        })?;
-    }};
+    Ok(result.is_some())
 }

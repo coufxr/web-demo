@@ -23,14 +23,8 @@ async fn main() {
     // guard 必须保持到程序结束，否则日志可能未写入就丢失
     let _guard = logger::init(&CONFIG);
 
-    // 初始化数据库连接
+    // 初始化数据库连接（自动同步 Schema）
     let db = db::init(&CONFIG.database).await.expect("数据库连接失败");
-
-    // 自动同步 Entity 定义到数据库表结构
-    db.get_schema_registry("entity::*")
-        .sync(&db)
-        .await
-        .expect("数据库同步失败");
 
     // 初始化 Redis 连接
     let redis_conn = db::init_redis(&CONFIG.redis).await.expect("Redis 连接失败");

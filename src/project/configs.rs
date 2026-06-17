@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use config::{Config, File};
 use serde::{Deserialize, Serialize};
 
@@ -47,6 +49,21 @@ pub struct Redis {
     pub db: Option<u16>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Oauth2Provider {
+    pub client_id: String,
+    pub client_secret: String,
+    pub auth_url: String,
+    pub token_url: String,
+    pub redirect_url: String,
+    pub scopes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Oauth2 {
+    pub providers: HashMap<String, Oauth2Provider>,
+}
+
 impl Redis {
     pub fn url(&self) -> String {
         let base = format!("redis://{}:{}", self.host, self.port);
@@ -83,6 +100,8 @@ pub struct Configs {
     pub database: Database,
     pub jwt: Jwt,
     pub redis: Redis,
+    #[serde(default)]
+    pub oauth2: Oauth2,
 }
 
 impl Configs {

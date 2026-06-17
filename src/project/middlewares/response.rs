@@ -1,5 +1,3 @@
-use std::str::from_utf8;
-
 use axum::{
     extract::Request,
     http::StatusCode,
@@ -15,12 +13,24 @@ pub async fn redirect_response(
     request: Request,
     next: Next,
 ) -> Result<impl IntoResponse, Response> {
-    if request.uri().path().starts_with("/docs") {
+    let path = request.uri().path();
+
+    // 放行不需要包装的路径
+    if path.starts_with("/docs") || path.starts_with("/scalar") || path.starts_with("/openapi.json")
+    {
         return Ok(next.run(request).await.into_response());
     }
 
     let res = next.run(request).await;
     let (parts, body) = res.into_parts();
+
+    // 放行重定向响应（3xx）
+    if parts.status.is_redirection() {
+        let mut res = (parts.status, body).into_response();
+        res.headers_mut().extend(parts.headers);
+        return Ok(res);
+    }
+
     let bytes = body
         .collect()
         .await
@@ -31,7 +41,7 @@ pub async fn redirect_response(
     let str = serde_json::from_slice::<Value>(&bytes);
     let data = match str {
         Ok(s) => s,
-        Err(_) => Value::from(from_utf8(&bytes).unwrap().to_string()),
+        Err(_) => Value::from(String::from_utf8_lossy(&bytes).to_string()),
     };
     // 无法在 Response 没有结果值时返回 {}
     let response = if parts.status == StatusCode::OK {
